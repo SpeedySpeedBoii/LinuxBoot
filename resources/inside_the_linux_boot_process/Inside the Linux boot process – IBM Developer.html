@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en-US"><link type="text/css" id="dark-mode" rel="stylesheet" href="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/a_002.html"><style type="text/css" id="dark-mode-custom-style"></style><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+	<link rel="stylesheet" href="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/style.css" as="style" onload="null" data-loadcss="true" media="all">
+	<noscript><link rel="stylesheet" href="https://developer.ibm.com/site-content/themes/ibmdeveloper-carbon/style.css?cb=17"></noscript>
+	<script type="text/javascript" async="" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/cool-2.js"></script><script id="loadedViaBxAnalytics-HU3dbkAG5wE0F1IkRf9S1RexlAqo3jby" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/analytics_002.js" type="text/javascript" async=""></script><script type="text/javascript" async="" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/analytics.js"></script><script type="text/javascript" async="" charset="utf-8" id="utag_53" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/js"></script><script type="text/javascript" async="" charset="utf-8" id="utag_19" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/hotjar-42920.js"></script><script type="text/javascript" async="" charset="utf-8" id="demandbase_js_lib" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/ab057a07.js"></script><script type="text/javascript" async="" charset="utf-8" id="utag_162" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/js.js"></script><script type="text/javascript" async="" charset="utf-8" id="tealium_cormetrics2" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/eluminate.js"></script><script src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/bluemix-analytics.js" type="application/javascript" async=""></script><script type="text/javascript" async="" charset="utf-8" id="dle_api_5a0a6ecd04ba699368c8be35bf66d6f7a56687a71b8b4b0b4a757be4b59294c4" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/p_5a0a6ecd04ba699368c8be35bf66d6f7a56687a71b8b4b0b4a757be4b59.js"></script><script src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/utag_003.js" type="application/javascript" async=""></script><script src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/dbdm-data" type="application/javascript" async=""></script><script src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/a" type="application/javascript" async=""></script><script src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/p_5a0a6ecd04ba699368c8be35bf66d6f7a56687a71b8b4b0b4a757be4b59.js" type="application/javascript" async=""></script><script>
+		/*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/
+(function( w ){
+	"use strict";
+	// rel=preload support test
+	if( !w.loadCSS ){
+		w.loadCSS = function(){};
+	}
+	// define on the loadCSS obj
+	var rp = loadCSS.relpreload = {};
+	// rel=preload feature support test
+	// runs once and returns a function for compat purposes
+	rp.support = (function(){
+		var ret;
+		try {
+			ret = w.document.createElement( "link" ).relList.supports( "preload" );
+		} catch (e) {
+			ret = false;
+		}
+		return function(){
+			return ret;
+		};
+	})();
+
+	// if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+	// then change that media back to its intended value on load
+	rp.bindMediaToggle = function( link ){
+		// remember existing media attr for ultimate state, or default to 'all'
+		var finalMedia = link.media || "all";
+
+		function enableStylesheet(){
+			// unbind listeners
+			if( link.addEventListener ){
+				link.removeEventListener( "load", enableStylesheet );
+			} else if( link.attachEvent ){
+				link.detachEvent( "onload", enableStylesheet );
+			}
+			link.setAttribute( "onload", null );
+			link.media = finalMedia;
+		}
+
+		// bind load handlers to enable media
+		if( link.addEventListener ){
+			link.addEventListener( "load", enableStylesheet );
+		} else if( link.attachEvent ){
+			link.attachEvent( "onload", enableStylesheet );
+		}
+
+		// Set rel and non-applicable media type to start an async request
+		// note: timeout allows this to happen async to let rendering continue in IE
+		setTimeout(function(){
+			link.rel = "stylesheet";
+			link.media = "only x";
+		});
+		// also enable media after 3 seconds,
+		// which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+		setTimeout( enableStylesheet, 3000 );
+	};
+
+	// loop through link elements in DOM
+	rp.poly = function(){
+		// double check this to prevent external calls from running
+		if( rp.support() ){
+			return;
+		}
+		var links = w.document.getElementsByTagName( "link" );
+		for( var i = 0; i < links.length; i++ ){
+			var link = links[ i ];
+			// qualify links to those with rel=preload and as=style attrs
+			if( link.rel === "preload" && link.getAttribute( "as" ) === "style" && !link.getAttribute( "data-loadcss" ) ){
+				// prevent rerunning on link
+				link.setAttribute( "data-loadcss", true );
+				// bind listeners to toggle media back
+				rp.bindMediaToggle( link );
+			}
+		}
+	};
+
+	// if unsupported, run the polyfill
+	if( !rp.support() ){
+		// run once at least
+		rp.poly();
+
+		// rerun poly on an interval until onload
+		var run = w.setInterval( rp.poly, 500 );
+		if( w.addEventListener ){
+			w.addEventListener( "load", function(){
+				rp.poly();
+				w.clearInterval( run );
+			} );
+		} else if( w.attachEvent ){
+			w.attachEvent( "onload", function(){
+				rp.poly();
+				w.clearInterval( run );
+			} );
+		}
+	}
+
+
+	// commonjs
+	if( typeof exports !== "undefined" ){
+		exports.loadCSS = loadCSS;
+	}
+	else {
+		w.loadCSS = loadCSS;
+	}
+}( typeof global !== "undefined" ? global : this ) );
+	</script>
+	<title>Inside the Linux boot process – IBM Developer</title>
+<link rel="dns-prefetch" href="https://1.www.s81c.com/">
+<link rel="dns-prefetch" href="https://resources.digital-cloud-ibm.medallia.eu/">
+<link rel="dns-prefetch" href="https://s.w.org/">
+<link rel="alternate" type="application/rss+xml" title="IBM Developer » Feed" href="https://developer.ibm.com/feed/">
+<link rel="alternate" type="application/rss+xml" title="IBM Developer » Comments Feed" href="https://developer.ibm.com/comments/feed/">
+    <link rel="canonical" href="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/a_002.html">
+    <meta name="description" content="The process of booting a Linux system consists of a number of stages. But whether you're booting a standard x86 desktop or a deeply embedded PowerPC target, much of the flow is surprisingly similar. This article explores the Linux boot process from the initial bootstrap to the start of the first user-space application. Along the way, you'll learn about various other boot-related topics such as the boot loaders, kernel decompression, the initial RAM disk, and other elements of Linux boot.">
+    <meta name="keywords" content="Linux,GNU,boot process,bootstrap,boot loader,basic input/output system,BIOS,Master Boot Record,MBR,LILO,GRUB,kernel,init,M. Tim Jones, dw_recommends">
+    <meta property="og:title" content="Inside the Linux boot process">
+    <meta property="og:description" content="The process of booting a Linux system consists of a number of stages. But whether you're booting a standard x86 desktop or a deeply embedded PowerPC target, much of the flow is surprisingly similar. This article explores the Linux boot process from the initial bootstrap to the start of the first user-space application. Along the way, you'll learn about various other boot-related topics such as the boot loaders, kernel decompression, the initial RAM disk, and other elements of Linux boot.">
+    <meta property="og:type" content="Article">
+    <meta property="og:site_name" content="IBM Developer">
+    <meta property="og:url" content="https://developer.ibm.com/technologies/linux/articles/l-linuxboot/">
+    <meta property="og:image" content="https://s3.us.cloud-object-storage.appdomain.cloud/ibmdevwp/icons/social/articles.jpg">
+    <meta property="twitter:account_id" content="16362921">
+    <meta name="twitter:card" content="summary">    <meta name="twitter:url" content="https://developer.ibm.com/technologies/linux/articles/l-linuxboot/">
+    <meta name="twitter:title" content="Inside the Linux boot process">
+    <meta name="twitter:description" content="The process of booting a Linux system consists of a number of stages. But whether you're booting a standard x86 desktop or a deeply embedded PowerPC target, much of the flow is surprisingly similar. This article explores the Linux boot process from the initial bootstrap to the start of the first user-space application. Along the way, you'll learn about various other boot-related topics such as the boot loaders, kernel decompression, the initial RAM disk, and other elements of Linux boot.">
+    <meta name="twitter:image" content="https://s3.us.cloud-object-storage.appdomain.cloud/ibmdevwp/icons/social/articles.jpg">
+    <meta property="twitter:image:src" content="https://s3.us.cloud-object-storage.appdomain.cloud/ibmdevwp/icons/social/articles.jpg">
+    <meta name="twitter:site" content="https://developer.ibm.com">
+    <meta name="twitter:creator" content="@ibmdeveloper">
+
+      
+    <!-- BEGIN: Use this section to set page specific variables for the Page Tag -->
+  	<script language="JavaScript">var NTPT_PGEXTRA="ibmCmaId=115533&ibmContentAreas=IBM Power Systems,Linux,Systems,";</script>
+  	<!--END -->
+    <script>
+  		digitalData = {
+  				"page": {
+  					"category": {
+  						"primaryCategory": "SOFDCACLZZ"
+  					},
+  					"pageInfo": {
+  						"effectiveDate": "2006-05-31T00:00:00",
+  						"language": "en",
+  						"publishDate": "2006-05-31 00:00:00",
+  						"expiryDate": "",
+  						"publisher": "IBM Corporation",
+  						"version": "v18",
+  						"ibm": {
+  							"contentDelivery": "IBM Developer template",
+  							"contentProducer": "IBM Developer",
+  							"country": "ZZ",
+                "contentArea": "IBM Power Systems,Linux,Systems,",
+  							"owner": "developerWorks Content/Raleigh/IBM",
+  							"siteID": "DWNEXT",
+  							"subject": "ZZ000",
+  							"type": "CT316",
+  							"contentId": "115533",
+  						},
+  						"keywords": "Linux,GNU,boot process,bootstrap,boot loader,basic input/output system,BIOS,Master Boot Record,MBR,LILO,GRUB,kernel,init,M. Tim Jones, dw_recommends",
+  						"description": "The process of booting a Linux system consists of a number of stages. But whether you're booting a standard x86 desktop or a deeply embedded PowerPC target, much of the flow is surprisingly similar. This article explores the Linux boot process from the initial bootstrap to the start of the first user-space application. Along the way, you'll learn about various other boot-related topics such as the boot loaders, kernel decompression, the initial RAM disk, and other elements of Linux boot."
+  					}
+  				}
+  			};
+
+        window._analytics = {
+          "coremetrics": false,
+          "optimizely": false,
+          "googleAddServices": false,
+          "addRoll": false,
+          "intercom": false,
+          "fullStory": false,
+          "hotjar": false,
+          "tealeaf": false,
+          "nps": true,
+          "segment_key": 'HU3dbkAG5wE0F1IkRf9S1RexlAqo3jby'
+        };
+  	</script>
+  	<!-- Segment meta tag -->
+  	<meta name="segment" property="developerWorks (developerWorks)" producttitle="developerWorks" value="Home English (developerWorks)">
+
+
+    		<script type="text/javascript">
+			window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/12.0.0-1\/72x72\/","ext":".png","svgUrl":"https:\/\/s.w.org\/images\/core\/emoji\/12.0.0-1\/svg\/","svgExt":".svg","source":{"concatemoji":"https:\/\/developer.ibm.com\/wp-includes\/js\/wp-emoji-release.min.js?ver=5.3.2"}};
+			!function(e,a,t){var r,n,o,i,p=a.createElement("canvas"),s=p.getContext&&p.getContext("2d");function c(e,t){var a=String.fromCharCode;s.clearRect(0,0,p.width,p.height),s.fillText(a.apply(this,e),0,0);var r=p.toDataURL();return s.clearRect(0,0,p.width,p.height),s.fillText(a.apply(this,t),0,0),r===p.toDataURL()}function l(e){if(!s||!s.fillText)return!1;switch(s.textBaseline="top",s.font="600 32px Arial",e){case"flag":return!c([127987,65039,8205,9895,65039],[127987,65039,8203,9895,65039])&&(!c([55356,56826,55356,56819],[55356,56826,8203,55356,56819])&&!c([55356,57332,56128,56423,56128,56418,56128,56421,56128,56430,56128,56423,56128,56447],[55356,57332,8203,56128,56423,8203,56128,56418,8203,56128,56421,8203,56128,56430,8203,56128,56423,8203,56128,56447]));case"emoji":return!c([55357,56424,55356,57342,8205,55358,56605,8205,55357,56424,55356,57340],[55357,56424,55356,57342,8203,55358,56605,8203,55357,56424,55356,57340])}return!1}function d(e){var t=a.createElement("script");t.src=e,t.defer=t.type="text/javascript",a.getElementsByTagName("head")[0].appendChild(t)}for(i=Array("flag","emoji"),t.supports={everything:!0,everythingExceptFlag:!0},o=0;o<i.length;o++)t.supports[i[o]]=l(i[o]),t.supports.everything=t.supports.everything&&t.supports[i[o]],"flag"!==i[o]&&(t.supports.everythingExceptFlag=t.supports.everythingExceptFlag&&t.supports[i[o]]);t.supports.everythingExceptFlag=t.supports.everythingExceptFlag&&!t.supports.flag,t.DOMReady=!1,t.readyCallback=function(){t.DOMReady=!0},t.supports.everything||(n=function(){t.readyCallback()},a.addEventListener?(a.addEventListener("DOMContentLoaded",n,!1),e.addEventListener("load",n,!1)):(e.attachEvent("onload",n),a.attachEvent("onreadystatechange",function(){"complete"===a.readyState&&t.readyCallback()})),(r=t.source||{}).concatemoji?d(r.concatemoji):r.wpemoji&&r.twemoji&&(d(r.twemoji),d(r.wpemoji)))}(window,document,window._wpemojiSettings);
+		</script><script src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/wp-emoji-release.js" type="text/javascript" defer="defer"></script>
+		<style type="text/css">
+img.wp-smiley,
+img.emoji {
+	display: inline !important;
+	border: none !important;
+	box-shadow: none !important;
+	height: 1em !important;
+	width: 1em !important;
+	margin: 0 .07em !important;
+	vertical-align: -0.1em !important;
+	background: none !important;
+	padding: 0 !important;
+}
+</style>
+	<link rel="stylesheet" id="ibmcode-articles-css" href="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/ibmcode_articles.css" type="text/css" media="all">
+<script type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/jquery.js"></script>
+<script type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/jquery-migrate.js"></script>
+<script type="text/javascript">
+/* <![CDATA[ */
+var authLinkAction = {"ajax_url":"https:\/\/developer.ibm.com\/wp-admin\/admin-ajax.php","nonce":"9cc9d0d751"};
+/* ]]> */
+</script>
+<script type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/authPageAccess.js"></script>
+<script defer="defer" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/ibmcode.js"></script>
+<script async="" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/carbon-components.js"></script>
+<script async="" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/ida_stats.js"></script>
+<script async="" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/embed.js"></script>
+<link rel="https://api.w.org/" href="https://developer.ibm.com/developerapi/">
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://developer.ibm.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="https://developer.ibm.com/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="Advanced techniques" href="https://developer.ibm.com/articles/au-unix-find/">
+<link rel="next" title="Monitoring a slow system" href="https://developer.ibm.com/articles/au-satslowsys/">
+<meta name="generator" content="WordPress 5.3.2">
+<link rel="shortlink" href="https://developer.ibm.com/?p=115533">
+<link rel="alternate" type="application/json+oembed" href="https://developer.ibm.com/developerapi/oembed/1.0/embed?url=https%3A%2F%2Fdeveloper.ibm.com%2Farticles%2Fl-linuxboot%2F">
+<link rel="alternate" type="text/xml+oembed" href="https://developer.ibm.com/developerapi/oembed/1.0/embed?url=https%3A%2F%2Fdeveloper.ibm.com%2Farticles%2Fl-linuxboot%2F&amp;format=xml">
+<link rel="icon" href="https://developer.ibm.com/site-content/uploads/2018/12/bee_128.png" sizes="32x32">
+<link rel="icon" href="https://developer.ibm.com/site-content/uploads/2018/12/bee_128.png" sizes="192x192">
+<link rel="apple-touch-icon-precomposed" href="https://developer.ibm.com/site-content/uploads/2018/12/bee_128.png">
+<meta name="msapplication-TileImage" content="https://developer.ibm.com/site-content/uploads/2018/12/bee_128.png">
+<meta property="og:locale" content="en-US"><meta property="og:published_time" content="2006-05-31 00:00:00"><meta property="article:published_time" content="2006-05-31 00:00:00"><img src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/genppageinit.gif" width="1" height="1"><script type="text/javascript" async="" charset="utf-8" id="tiqapp" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/utag_002.js"></script><script type="text/javascript" async="" charset="utf-8" id="LOTCC_10026" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/cc.json"></script><script type="text/javascript" async="" charset="utf-8" id="utag_ibm.web_28" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/utag_007.js"></script><script type="text/javascript" async="" charset="utf-8" id="utag_ibm.web_53" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/utag_006.js"></script><script type="text/javascript" async="" charset="utf-8" id="utag_ibm.web_45" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/utag_005.js"></script><script type="text/javascript" async="" charset="utf-8" id="utag_ibm.web_19" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/utag.js"></script><script type="text/javascript" async="" charset="utf-8" id="utag_ibm.web_94" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/utag_004.js"></script><style type="text/css">@media only screen and (max-width:480px){.truste_box_overlay{width: 100%!important;margin: 0px!important;max-width: 100%!important;box-shadow: rgb(0,0,0,0.2) 0px 0px 16px 2px!important;}}@media only screen and (min-width:481px){.truste_box_overlay{width: 80%!important;margin: 20px auto!important;max-width: 800px!important;box-shadow: rgb(0,0,0,0.2) 0px 0px 16px 2px!important;}}</style><script type="text/javascript" async="" charset="utf-8" id="tealium_visitor_service_45main" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/0171028cba0300028f6f93987fb90004400420090086e.js"></script><script language="javascript" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/50200000.js"></script><script language="javascript" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/cookie-id.js"></script><script language="javascript" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/rules_50200000.js"></script><script language="javascript" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/dispatcher-v3.js"></script><style type="text/css">.truste_cookie_prefs,#teconsent{display:none !important}</style><script src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/yahoo-min.js" type="text/javascript"></script><script src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/cp-v3.js" type="text/javascript"></script><script src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/json-min.js" type="text/javascript"></script><style type="text/css" id="kampyleStyle">.noOutline{outline: none !important;}.wcagOutline:focus{outline: 1px dashed #595959 !important;outline-offset: 2px !important;transition: none !important;}</style><script type="text/javascript" async="" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/usersnap2-12669-en.js"></script></head>
+<body id="ibm-com" data-envt="production" class="ibmcode_articles-template-default single single-ibmcode_articles postid-115533 no-fixed-menu no-sidebar" style="">
+	<div class="code_adorn_announcement" id="code_announcement">
+                <div class="code_content__wrap"><style>
+  .c4c-announcement{
+    background: #0062ff;
+    min-height: 80px;   
+    box-sizing: border-box;    
+  }
+  .c4c-announcement p{
+    text-align: center;
+    font-size: 1.225rem;
+    line-height: 1.225rem;
+    font-weight: 500;
+    
+  }
+  .c4c-announcement a p{
+    display: table;
+    color: #1e1e1e;
+    width: auto;
+    margin: 0 auto;
+  }
+  .c4c-announcement a {
+    text-decoration: none;
+    display: block;
+    text-align: center;
+  }
+  .c4c-announcement a p .lt_text { 
+    color: #fff;
+    display: table-cell;
+    vertical-align: middle;
+  }
+  .c4c-announcement a p .rt_img {
+    display: table-cell;
+    vertical-align: middle;
+    padding: 20px 35px 24px 0px;
+  }
+  .c4c-announcement a p strong{
+    color: #fff;
+padding: 10px 20px !important;
+margin-left: 10px;
+    display: inline-block;
+    background-color: #0062ff;
+    color: #FFF;
+    font-weight: 600;
+    font-size: 1.225rem;
+ 
+
+    
+    border-width: 1px;
+    border-style: solid;
+    border-color: #ffffff;
+    color: #ffffff;
+
+
+ }
+
+
+
+
+.c4c-announcement a p img{
+    height: auto;
+    display: block;
+    width: 125px;
+    vertical-align: middle;
+    margin-left: 1vw;
+    max-width: none;
+    position: relative;
+    top: 1px;
+  }
+</style>
+<div class="c4c-announcement">
+<a href="https://developer.ibm.com/callforcode/">
+<p>
+
+  <span class="rt_img"><img src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/2020cfcwht-sm.svg"></span>
+  <span class="lt_text">2020 Call for Code® Global Challenge takes on Covid-19. &nbsp;<strong>Answer the call <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="will-change: transform;vertical-align: middle;display: inline-block;fill: #FFF;">
+              <path d="M9.3 3.7l3.8 3.8H1v1h12.1l-3.8 3.8.7.7 5-5-5-5z"></path>
+            </svg></strong></span>
+  
+</p>
+</a>
+</div><a href="#" class="announcement_close" id="announcement_close"><svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M16 2C8.2 2 2 8.2 2 16s6.2 14 14 14 14-6.2 14-14S23.8 2 16 2zm0 26C9.4 28 4 22.6 4 16S9.4 4 16 4s12 5.4 12 12-5.4 12-12 12z"></path><path d="M21.4 23L16 17.6 10.6 23 9 21.4l5.4-5.4L9 10.6 10.6 9l5.4 5.4L21.4 9l1.6 1.6-5.4 5.4 5.4 5.4z"></path><title>Close outline</title></svg></a></div>
+              </div>	<div class="bx--header--website-wrap">
+  <div class="code_content__wrap">
+
+    <header aria-label="IBM Platform Name" class="bx--header" role="banner">
+      <a class="bx--skip-to-content" href="#main-content" tabindex="0">Skip to main content</a>
+      <button aria-label="Open menu" id="developer-burger" class="bx--header__action--menu bx--header__action bx--header__menu-trigger bx--header__menu-toggle" title="Open menu" type="button">
+        <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" style="will-change: transform;">
+          <path d="M2 14.8h16V16H2zm0-3.6h16v1.2H2zm0-3.6h16v1.2H2zM2 4h16v1.2H2z"></path>
+        </svg>
+      </button>
+      <a class="bx--header__name-old" href="https://developer.ibm.com/"><span class="bx--header__name--prefix">IBM</span>&nbsp;Developer</a>
+      <div class="bx--header__name">
+        <a class="bx--header__ibm" href="https://www.ibm.com/">
+          <svg class="Footer-module--logo--3otJM" width="47" height="30" viewBox="0 -10 85 35" xmlns="http://www.w3.org/2000/svg"><g fill-rule="evenodd"><path d="M0 32h15.689v-2.038H0zM0 27.721h15.689v-2.038H0zM4.483 23.442h6.724v-2.037H4.483zM4.483 19.164h6.724v-2.038H4.483zM4.483 14.885h6.724v-2.037H4.483zM4.482 10.606h6.724V8.568H4.482zM0 6.327h15.689V4.29H0zM0 2.049h15.689V.011H0zM17.93 29.963V32h16.504a8.521 8.521 0 0 0 5.54-2.037H17.93zM17.93 25.683v2.038h23.914a8.535 8.535 0 0 0 .85-2.038H17.93zM22.412 23.442h6.724v-2.037h-6.724zM40.124 17.126H22.412v2.038H41.77a8.62 8.62 0 0 0-1.645-2.038M22.413 12.848v2.036h17.786a8.612 8.612 0 0 0 1.644-2.037h-19.43zM42.693 6.327a8.447 8.447 0 0 0-.85-2.037H17.93v2.037h24.763zM39.974 2.049a8.521 8.521 0 0 0-5.54-2.037H17.93v2.037h22.044zM22.412 10.606h6.724V8.568h-6.724zM35.453 10.606h7.29a8.603 8.603 0 0 0 .248-2.038h-7.538v2.038zM35.453 21.405v2.037h7.538c0-.703-.09-1.384-.248-2.037h-7.29zM57.457 0H44.825v2.038h13.34zM44.826 32h11.21v-2.038h-11.21zM44.826 27.72h11.21v-2.038h-11.21zM49.309 23.439h6.727v-2.038h-6.727zM49.309 19.159h6.727v-2.038h-6.727zM69.488 32h11.21v-2.038h-11.21zM69.488 27.72h11.21v-2.038h-11.21zM69.488 23.439h6.726v-2.038h-6.726zM69.487 19.159h6.726v-2.038h-6.726zM69.488 14.879h6.726V12.84H63.606l-.707 2.038h5.903l.686-1.94zM61.916 12.84H49.31v2.039h6.726v-1.94l.686 1.94h5.903zM76.213 8.56H65.091l-.707 2.038h11.83zM68.06 0l-.706 2.038h13.344V0zM62.757 32l.72-2.038h-1.432zM61.254 27.72h3.015l.72-2.038h-4.455zM59.743 23.44h6.037l.72-2.039h-7.476zM58.232 19.159h9.06l.719-2.038h-10.5zM49.309 10.598h11.83l-.707-2.038H49.309zM65.868 6.318h14.83V4.28H66.576zM58.947 4.28H44.826v2.038h14.828z"></path></g></svg>
+        </a>
+        <a href="https://developer.ibm.com/" class="bx--header__ibmdeveloper">
+          IBM <b>Developer</b>        </a>
+      </div>
+
+      <nav aria-label="IBM [Platform]" class="bx--header__nav">
+        <ul class="bx--header__menu-bar" role="menubar"><li id="topics" class=" menu-item menu-item-type-custom menu-item-object-custom menu-item menu-item-type-custom menu-item-object-custom menu-item-has-mega"><a aria-haspopup="menu" aria-expanded="false" role="menuitem" class="bx--header__menu-item bx--header__menu-title" href="#">Topics<svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true" class="bx--header__menu-arrow"><path d="M5 6L0 1 .7.3 5 4.6 9.3.3l.7.7z"></path></svg></a><div class="mega-menu bx--header__menu sub-menu" role="menu"><div class="mega-menu-inner"><div class="code_content__wrap"><ul>
+  <li><h4>Technologies</h4></li>
+  <li><a href="https://developer.ibm.com/technologies/analytics/">Analytics</a></li>
+  <li><a href="https://developer.ibm.com/technologies/artificial-intelligence/">Artificial Intelligence</a></li>
+  <li><a href="https://developer.ibm.com/technologies/blockchain/">Blockchain</a></li>
+  <li><a href="https://developer.ibm.com/technologies/containers/">Containers</a></li>
+  <li><a href="https://developer.ibm.com/technologies/java/">Java</a></li>
+  <li><a href="https://developer.ibm.com/technologies/">See all</a></li>
+</ul>
+<ul>
+  <li><h4>Industries</h4></li>
+  <li><a href="https://developer.ibm.com/industries/gaming/">Gaming</a></li>
+  <li><a href="https://developer.ibm.com/industries/finance/">Finance</a></li>
+  <li><a href="https://developer.ibm.com/industries/retail/">Retail</a></li>
+  <li><a href="https://developer.ibm.com/industries/">See all</a></li>
+</ul>
+<ul>
+  <li><h4>Deployment Models</h4></li>
+  <li><a href="https://developer.ibm.com/depmodels/cloud/">Cloud</a></li>
+  <li><a href="https://developer.ibm.com/depmodels/hybrid/">Hybrid Cloud</a></li>
+  <li><a href="https://developer.ibm.com/depmodels/edge-computing/">Edge Computing</a></li>
+  <li><a href="https://developer.ibm.com/depmodels/on-prem/">On Premises</a></li>
+  <li><a href="https://developer.ibm.com/depmodels/">See all</a></li>
+</ul>
+<ul>
+  <li><h4>Solutions</h4></li>
+  <li><a href="https://developer.ibm.com/solutions/ai-development/">Artificial Intelligence</a></li>
+  <li><a href="https://developer.ibm.com/solutions/blockchain-app-development/">Blockchain</a></li>
+  <li><a href="https://developer.ibm.com/solutions/container-orchestration-and-deployment/">Containers &amp; Microservices</a></li>
+  <li><a href="https://developer.ibm.com/solutions/mobile-app-development/">Mobile Development</a></li>
+</ul></div></div></div></li>
+<li id="products_&amp;_services" class=" menu-item menu-item-type-custom menu-item-object-custom menu-item menu-item-type-custom menu-item-object-custom menu-item-has-mega"><a aria-haspopup="menu" aria-expanded="false" role="menuitem" class="bx--header__menu-item bx--header__menu-title" href="#">Products &amp; Services<svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true" class="bx--header__menu-arrow"><path d="M5 6L0 1 .7.3 5 4.6 9.3.3l.7.7z"></path></svg></a><div class="mega-menu bx--header__menu sub-menu" role="menu"><div class="mega-menu-inner"><div class="code_content__wrap"><ul>
+  <li><h4>Open Source</h4></li>
+  <li><a href="https://developer.ibm.com/components/kubernetes/">Kubernetes</a></li>
+  <li><a href="https://developer.ibm.com/components/node-red/">Node-RED</a></li>
+  <li><a href="https://developer.ibm.com/components/istio/">Istio</a></li>
+  <li><a href="https://developer.ibm.com/components/tensorflow/">TensorFlow</a></li>
+  <li><a href="https://developer.ibm.com/components/open-liberty/">Open Liberty</a></li>
+  <li><a href="https://developer.ibm.com/components/">See all</a></li>
+</ul>
+<ul>
+  <li><h4>IBM Products &amp; Services</h4></li>
+  <li><a href="https://developer.ibm.com/components/cloud-pak-for-applications/">IBM Cloud Pak for Applications</a></li>
+  <li><a href="https://developer.ibm.com/components/ibmz/">IBM Z</a></li>
+  <li><a href="https://developer.ibm.com/components/redhat-openshift-ibm-cloud/">Red Hat OpenShift on IBM Cloud</a></li>
+  <li><a href="https://developer.ibm.com/components/cloud-pak-for-data/">IBM Cloud Pak for Data</a></li>
+  <li><a href="https://developer.ibm.com/components/sterling/">IBM Sterling</a></li>
+  <li><a href="https://developer.ibm.com/components/">See all</a></li>
+</ul></div></div></div></li>
+<li id="community" class=" menu-item menu-item-type-custom menu-item-object-custom menu-item menu-item-type-custom menu-item-object-custom menu-item-has-mega"><a aria-haspopup="menu" aria-expanded="false" role="menuitem" class="bx--header__menu-item bx--header__menu-title" href="#">Community<svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true" class="bx--header__menu-arrow"><path d="M5 6L0 1 .7.3 5 4.6 9.3.3l.7.7z"></path></svg></a><div class="mega-menu bx--header__menu sub-menu" role="menu"><div class="mega-menu-inner"><div class="code_content__wrap"><ul>
+  <li><a href="https://developer.ibm.com/community/">Home</a></li>
+  <li><a href="https://developer.ibm.com/blogs/">Blog posts</a></li>
+  <li><a href="https://developer.ibm.com/events/">Events</a></li>
+  <li><a href="https://developer.ibm.com/videos/">Videos</a></li>
+  <li><a href="https://developer.ibm.com/livestream/">Livestreaming</a></li>
+  <li><a href="https://developer.ibm.com/podcasts/">Podcasts</a></li>
+  <li><a href="https://developer.ibm.com/cities/">Cities</a></li>
+  <li><a href="https://developer.ibm.com/newsletters/">Newsletters</a></li>
+</ul></div></div></div></li>
+<li id="open_source_at_ibm" class=" menu-item menu-item-type-custom menu-item-object-custom menu-item menu-item-type-custom menu-item-object-custom menu-item-has-mega"><a aria-haspopup="menu" aria-expanded="false" role="menuitem" class="bx--header__menu-item bx--header__menu-title" href="#">Open source at IBM<svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true" class="bx--header__menu-arrow"><path d="M5 6L0 1 .7.3 5 4.6 9.3.3l.7.7z"></path></svg></a><div class="mega-menu bx--header__menu sub-menu" role="menu"><div class="mega-menu-inner"><div class="code_content__wrap"><ul>
+  <li><a href="https://developer.ibm.com/open/">Home</a></li>
+  <li><a href="https://developer.ibm.com/open/code/">Code</a></li>
+  <li><a href="https://developer.ibm.com/open/community/">Communities</a></li>
+  <li><a href="https://developer.ibm.com/open/culture/">Open enterprise</a></li>
+  <li><a href="https://developer.ibm.com/open/projects/">Open projects</a></li>
+  <li><a href="https://developer.ibm.com/collections/open-stories/">Open stories</a></li>
+  <li><a href="https://developer.ibm.com/exchanges/models/">Model Asset eXchange</a></li>
+  <li><a href="https://developer.ibm.com/exchanges/data/">Data Asset eXchange</a></li>
+</ul></div></div></div></li>
+</ul>      </nav>
+      <div class="bx--header__global">
+        <div id="header-search-module" class="GlobalSearch-module--container GlobalSearch-module--hidden" role="search">
+          <label for="search-input" id="search-label" class="GlobalSearch-module--label">Search</label>
+          <form action="https://developer.ibm.com" method="GET" class="GlobalSearch-module--inputWrapper" role="combobox" aria-owns="search-menu" aria-haspopup="menu" aria-expanded="false">
+            <button tabindex="0" class="GlobalSearch-module--searchButton GlobalSearch-module--search-button--search" type="button" aria-label="Open search">
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" style="will-change:transform" description="Open search" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+                <path d="M30 28.59L22.45 21A11 11 0 1 0 21 22.45L28.59 30zM5 14a9 9 0 1 1 9 9 9 9 0 0 1-9-9z"></path>
+              </svg>
+            </button>
+            <input type="text" autocomplete="off" tabindex="-1" aria-autocomplete="list" aria-controls="search-menu" aria-activedescendant="menu-item-0" class="GlobalSearch-module--input GlobalSearch-module--hidden" id="search-input-header" placeholder="Search IBM Developer" name="s">
+            <button tabindex="-1" class="GlobalSearch-module--searchButton GlobalSearch-module--search-button--close GlobalSearch-module--hidden" type="button" aria-label="Clear search">
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" style="will-change:transform" description="Clear search" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+                <path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6L24 9.4z"></path>
+              </svg>
+            </button>
+          </form>
+          <ul aria-labelledby="search-label" role="menu" id="search-menu" class="GlobalSearch-module--list GlobalSearch-module--hidden"></ul>
+        </div>
+        <div id="header-login-module" aria-expanded="false" class="GlobalLogin-module--container GlobalLogin-module--hidden" role="login">
+                      <button aria-label="Open menu" class="bx--header__action--login bx--header__action" title="Open menu" type="button">
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;">
+                <path d="M16 2a14 14 0 1 0 14 14A14 14 0 0 0 16 2zm-6 24.38v-2A3.22 3.22 0 0 1 13 21h6a3.22 3.22 0 0 1 3 3.39v2a11.92 11.92 0 0 1-12 0zm14-1.46v-.61A5.21 5.21 0 0 0 19 19h-6a5.2 5.2 0 0 0-5 5.31v.59a12 12 0 1 1 16 0z"></path><path d="M16 7a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a3 3 0 1 1 3-3 3 3 0 0 1-3 3z"></path>
+              </svg>
+            </button>
+            <ul id="ibm-signin-minimenu-container" role="menu" aria-label="Profile" class="bx--header__submenu">
+							<li class="menu-item"><a class="bx--header__menu-item" role="menuitem" href="https://myibm.ibm.com/?lnk=mmi" tabindex="0">My IBM</a></li>
+							<li class="menu-item"><a class="bx--header__menu-item" role="menuitem" href="https://developer.ibm.com/sso/login?d=https://developer.ibm.com/technologies/linux/articles/l-linuxboot/&amp;lang=us_EN" tabindex="-1">Sign In</a></li>
+						</ul>
+                  </div>
+      </div>
+    </header>
+  </div>
+</div>
+<div class="side-nav-click-to-close side-nav-click-to-close__closed" id="code--side-nav-cover"></div>
+<!-- Navigation wrapper for accessibility -->
+<nav class="bx--side-nav__navigation bx--side-nav bx--side-nav--expanded bx--side-nav--website bx--side-nav--website--dark bx--side-nav--ux" aria-label="Side navigation" id="code--side-nav-old">
+<!--nav class="bx--side-nav__navigation bx--side-nav bx--side-nav--ux bx--side-nav--website--dark" role="navigation" aria-label="Navigation" id="code--side-nav"-->
+  <!-- <header class="bx--side-nav__header"></header> -->
+  <!-- Renders all of our navigation items -->
+  <ul class="bx--side-nav__items" id="developerNavTriggersMobile"><li data-level="0" class="bx--side-nav__item "><a href="https://developer.ibm.com/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Home</span></a></li>
+<hr class="bx--side-nav__divider">
+<li data-level="0" class="megasection bx--side-nav__item"><button aria-haspopup="true" aria-expanded="true" class="noclick bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">Topics</span>
+            </button>
+<ul class="bx--side-nav__menu" role="menu">
+<li data-level="1" class="bx--side-nav__menu-item"><button aria-haspopup="true" aria-expanded="false" class="bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">Technologies</span>
+              <div class="bx--side-nav__icon bx--side-nav__icon--small bx--side-nav__submenu-chevron">
+                <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"></path></svg>
+              </div>
+            </button>
+	<ul class="bx--side-nav__menu" role="menu">
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/technologies/analytics" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Analytics</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/technologies/artificial-intelligence" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Artificial Intelligence</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/technologies/blockchain" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Blockchain</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/technologies/containers" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Containers</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/technologies/java" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Java</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/technologies/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">See all</span></a></li>
+	</ul>
+</li>
+<li data-level="1" class="bx--side-nav__menu-item"><button aria-haspopup="true" aria-expanded="false" class="bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">Industries</span>
+              <div class="bx--side-nav__icon bx--side-nav__icon--small bx--side-nav__submenu-chevron">
+                <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"></path></svg>
+              </div>
+            </button>
+	<ul class="bx--side-nav__menu" role="menu">
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/industries/gaming/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Gaming</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/industries/finance/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Finance</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/industries/retail/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Retail</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/industries/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">See all</span></a></li>
+	</ul>
+</li>
+<li data-level="1" class="bx--side-nav__menu-item"><button aria-haspopup="true" aria-expanded="false" class="bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">Deployment models</span>
+              <div class="bx--side-nav__icon bx--side-nav__icon--small bx--side-nav__submenu-chevron">
+                <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"></path></svg>
+              </div>
+            </button>
+	<ul class="bx--side-nav__menu" role="menu">
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/depmodels/cloud/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Cloud</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/depmodels/hybrid/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Hybrid</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/depmodels/edge-computing/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Edge computing</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/depmodels/on-prem/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">On Premises</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/depmodels/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">See all</span></a></li>
+	</ul>
+</li>
+<li data-level="1" class="bx--side-nav__menu-item"><button aria-haspopup="true" aria-expanded="false" class="bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">Solutions</span>
+              <div class="bx--side-nav__icon bx--side-nav__icon--small bx--side-nav__submenu-chevron">
+                <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"></path></svg>
+              </div>
+            </button>
+	<ul class="bx--side-nav__menu" role="menu">
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/solutions/ai-development/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Artificial Intelligence</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/solutions/blockchain-app-development/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Blockchain</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/solutions/container-orchestration-and-deployment/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Containers &amp; Microservices</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/solutions/mobile-app-development/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Mobile Development</span></a></li>
+	</ul>
+</li>
+</ul>
+</li>
+<hr class="bx--side-nav__divider">
+<li data-level="0" class="megasection bx--side-nav__item"><button aria-haspopup="true" aria-expanded="true" class="noclick bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">Products &amp; Services</span>
+            </button>
+<ul class="bx--side-nav__menu" role="menu">
+<li data-level="1" class="bx--side-nav__menu-item"><button aria-haspopup="true" aria-expanded="false" class="bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">Open Source</span>
+              <div class="bx--side-nav__icon bx--side-nav__icon--small bx--side-nav__submenu-chevron">
+                <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"></path></svg>
+              </div>
+            </button>
+	<ul class="bx--side-nav__menu" role="menu">
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/kubernetes/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Kubernetes</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/node-red/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Node-RED</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/istio/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Istio</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/tensorflow/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">TensorFlow</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/open-liberty/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Open Liberty</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">See all</span></a></li>
+	</ul>
+</li>
+<li data-level="1" class="bx--side-nav__menu-item"><button aria-haspopup="true" aria-expanded="false" class="bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">IBM Product &amp; Services</span>
+              <div class="bx--side-nav__icon bx--side-nav__icon--small bx--side-nav__submenu-chevron">
+                <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M16 22L6 12l1.4-1.4 8.6 8.6 8.6-8.6L26 12z"></path></svg>
+              </div>
+            </button>
+	<ul class="bx--side-nav__menu" role="menu">
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/cloud-pak-for-applications/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">IBM Cloud Pak for Applications</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/cloud-pak-for-data/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">IBM Cloud Pak for Data</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/redhat-openshift-ibm-cloud/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Red Hat OpenShift on IBM Cloud</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/cloud-pak-for-data/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">IBM Cloud Pak for Data</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/sterling/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">IBM Sterling</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/components/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">See all</span></a></li>
+	</ul>
+</li>
+</ul>
+</li>
+<hr class="bx--side-nav__divider">
+<li data-level="0" class="megasection bx--side-nav__item"><button aria-haspopup="true" aria-expanded="true" class="noclick bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">Community</span>
+            </button>
+<ul class="bx--side-nav__menu" role="menu">
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/community/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Home</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/blogs/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Blog posts</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/events/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Events</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/videos/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Videos</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/livestream/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Livestreaming</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/podcasts/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Podcasts</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/cities/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Cities</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/newsletters/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Newsletters</span></a></li>
+</ul>
+</li>
+<hr class="bx--side-nav__divider">
+<li data-level="0" class="megasection bx--side-nav__item"><button aria-haspopup="true" aria-expanded="true" class="noclick bx--side-nav__submenu" type="button">
+              <span class="bx--side-nav__submenu-title">Opensource at IBM</span>
+            </button>
+<ul class="bx--side-nav__menu" role="menu">
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/open/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Home</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/open/code/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Code</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/open/community" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Community</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/open/culture/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Open enterprise</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/open/projects/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Projects</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/collections/open-stories" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Open stories</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/exchanges/models/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Model asset exchange</span></a></li>
+<li data-level="2" class="bx--side-nav__menu-item"><a href="https://developer.ibm.com/exchanges/data/" class="bx--side-nav__link" role="menuitem"><span class="bx--side-nav__link-text">Data asset exchange</span></a></li>
+</ul>
+</li>
+<hr class="bx--side-nav__divider">
+</ul>  <!-- Renders the button to collapse or expand the side nav -->
+  <!-- <footer class="bx--side-nav__footer"></footer> -->
+</nav>
+
+	<!-- totally new layout -->
+<div class="ibm-developer" style="display:none;">
+  <div class="bx--grid">
+    <div class="bx--row">
+      <div class="bx--col-lg-12 ibmd-leftnav">max-content width</div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- begin new layout -->
+<div id="content" class="container ">
+  <div id="code_aside__navwrap" class="code_aside__navwrap"><div id="code_leftnav" class="code_leftnav">
+              <div class="mobile_wrap">
+                <div class="inner">
+                  <div class="code_leftnav_header"><h3><a href="https://developer.ibm.com/technologies/linux/">Linux</a></h3></div><nav role="navigation" aria-label="Content portlet"><ul id="menu-content-nav" class=""><li><a href="https://developer.ibm.com/technologies/linux/articles/">Articles</a></li><li><a href="https://developer.ibm.com/technologies/linux/patterns/">Code Patterns</a></li><li><a href="https://developer.ibm.com/technologies/linux/series/">Series</a></li><li><a href="https://developer.ibm.com/technologies/linux/tutorials/">Tutorials</a></li><li><a href="https://developer.ibm.com/technologies/linux/videos/">Videos</a></li></ul></nav><nav role="navigation" aria-label="Community portlet"><h4>Community</h4><ul id="menu-community-nav" class=""><li><a href="https://developer.ibm.com/technologies/linux/blogs/">Blog Posts</a></li><li><a href="https://developer.ibm.com/technologies/linux/events/">Events</a></li></ul></nav><nav> <h4>Related topics</h4><ul><li><a href="https://developer.ibm.com/components/z-systems">IBM Z</a></li><li><a href="https://developer.ibm.com/components/ibm-linuxone">LinuxONE</a></li><li><a href="https://developer.ibm.com/components/ibm-power">IBM Power Systems</a></li></ul> </nav> <nav> <h4>More resources</h4><ul><li><a href="https://developer.ibm.com/linuxonpower">Linux on Power Developer Portal</a></li> <li><a href="https://developer.ibm.com/linuxone/">LinuxONE Community Cloud</a></li><li><a href="https://www.ibm.com/developerworks/linux/linux390/index.html">Linux on Z and LinuxONE for developers</a></li><li><a href="http://www.ibm.com/support/knowledgecenter/linuxonibm/liabx/lcon_System_p5.htm">Linux on Power Knowledge Center</a></li><li><a href="https://www.ibm.com/support/knowledgecenter/linuxonibm/liaaf/lnz_r_main.html">Linux on Z and LinuxONE Knowledge Center</a></li><li><a href="https://www.ibm.com/support/knowledgecenter/linuxonibm/liaaa/ic-homepage.htm">Linux information for IBM Systems</a></li></ul> </nav>
+                  <div class="code_aside_mobilenav_close">
+                    <button id="code_aside__navtoggle_close">
+                      <i>Close</i>
+                      <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6L24 9.4z"></path><title>Close</title></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div></div>  <div class="page_content">
+    <div class="page_content_wrap">
+
+<!-- begin new layout -->
+<div class="code_postcontent">
+  <div class="cpt-hero">
+    <div class="cpt-hero__wrap">
+      <div class="bx--grid bx--no-gutter">
+        <div class="bx--row">
+          <div class="bx--col-md-7 bx--col-lg-7 herotext">
+            <p class="cpt-byline__posttype"><span>Article</span></p>
+            <h1 class="cpt-byline__title">Inside the Linux boot process</h1>            <h2 class="cpt-byline__subtitle">Take a guided tour from the Master Boot Record to the first user-space application</h2>          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cpt-body">
+    
+    <div class="bx--grid bx--no-gutter">
+      <div class="bx--row">
+        <div class="bx--col-md-7 bx--col-lg-7">
+          <div class="cpt-byline">
+            <div class="cpt-byline__wrap">
+              <p class="cpt-byline__author">By M. Jones <br> Published May 31, 2006</p>
+              <hr>
+            </div>
+          </div>
+          <section class="wp-content">
+            <!-- begin main body content -->
+            <p xmlns="http://www.w3.org/1999/xhtml">In the early days, 
+bootstrapping a computer meant feeding a paper tape containing a boot 
+program or manually loading a boot program using the front panel 
+address/data/control switches. Today’s computers are equipped with 
+facilities to simplify the boot process, but that doesn’t necessarily 
+make it simple.</p>
+<p>Let’s start with a high-level view of Linux boot so you can see the 
+entire landscape. Then we’ll review what’s going on at each of the 
+individual steps. Source references along the way will help you navigate
+ the kernel tree and dig in further.</p>
+<h2 id="overview">Overview</h2>
+<p>Figure 1 gives you the 20,000-foot view.</p>
+<h5 class="ibm-h5" id="fig1">Figure 1. The 20,000-foot view of the Linux boot process</h5><img class="" alt="High-level view of the Linux kernel boot" data-src="https://developer.ibm.com/developer/articles/l-linuxboot/images/fig1.gif" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/fig1.gif" width="529" height="300">
+<p>When a system is first booted, or is reset, the processor executes 
+code at a well-known location. In a personal computer (PC), this 
+location is in the basic input/output system (BIOS), which is stored in 
+flash memory on the motherboard <span style="background-color:yellow;"><font size="4">[Older systems had the BIOS stored in a ROM chip. PCs today use a flash BIOS because it can be updated without physically removing the chip from the motherboard]</font></span>. The central processing unit (CPU) in an
+ embedded system invokes the reset vector to start a program at a known 
+address in flash/ROM. In either case, the result is the same. Because 
+PCs offer so much flexibility, the BIOS must determine which devices are
+ candidates for boot. We’ll look at this in more detail later.</p>
+<p>When a boot device is found, the first-stage boot loader is loaded 
+into RAM and executed. This boot loader is less than 512 bytes in length
+ (a single sector), and its job is to load the second-stage boot loader.</p>
+<p>When the second-stage boot loader is in RAM and executing, a splash 
+screen is commonly displayed, and Linux and an optional initial RAM disk
+ (temporary root file system) are loaded into memory. When the images 
+are loaded, the second-stage boot loader passes control to the kernel 
+image and the kernel is decompressed and initialized. At this stage, the
+second-stage boot loader <span style="background-color:yellow;"><font size="4">[This is a mistake, they mean kernel, not second stage boot loader]</font></span> checks the system hardware, enumerates the 
+attached hardware devices, mounts the root device, and then loads the 
+necessary kernel modules. When complete, the first user-space program (<code style="font-family:monospace;font-size:1rem">init</code>) starts, and high-level system initialization is performed.</p>
+<p>That’s Linux boot in a nutshell. Now let’s dig in a little further and explore some of the details of the Linux boot process.</p>
+<h2 id="system-startup">System startup</h2>
+<p><span style="background-color:yellow;"><font size="4">[That's ok if you don't understand the following paragraph, embedded systems are out of scope.]<br></font></span>The system startup stage depends on the hardware that Linux is being 
+booted on. On an embedded platform, a bootstrap environment is used when
+ the system is powered on, or reset. Examples include U-Boot, RedBoot, 
+and MicroMonitor from Lucent. Embedded platforms are commonly shipped 
+with a boot monitor. These programs reside in special region of flash 
+memory on the target hardware and provide the means to download a Linux 
+kernel image into flash memory and subsequently execute it. In addition 
+to having the ability to store and boot a Linux image, these boot 
+monitors perform some level of system test and hardware initialization. 
+In an embedded target, these boot monitors commonly cover both the 
+first- and second-stage boot loaders.</p>
+<div class="dw-article-sidebar ibm-background-cool-white-20"> <p> <strong>Extracting the MBR</strong></p> <p>To see the contents of your MBR, use this command:</p> <p> <code style="font-family:monospace;font-size:1rem"> <code style="font-family:monospace;font-size:1rem">#</code> <strong>dd if=/dev/hda <br>of=mbr.bin bs=512 <br>count=1</strong> <br> <code style="font-family:monospace;font-size:1rem">#</code> <strong>od -xa mbr.bin</strong></code></p> <p>The <code style="font-family:monospace;font-size:1rem">dd</code>
+ command, which needs to be run from root, reads the first 512 bytes 
+from /dev/hda (the first Integrated Drive Electronics, or IDE drive) and
+ writes them to the <code style="font-family:monospace;font-size:1rem">mbr.bin </code>file. The <code style="font-family:monospace;font-size:1rem">od</code> command prints the binary file in hex and ASCII formats.</p></div>
+<p>
+In a PC, booting Linux begins in the BIOS at address 0xFFFF0<span style="background-color:yellow;"><font size="4">[Some of the memory space is mapped to the bios flash/rom and not to the RAM. When the CPU starts running it starts executing code from what's called the 'reset vector'. The reset vector is a piece of code inside the BIOS and it used to be at 0xffff0, which was the last 16 bytes in old 16 bit 'real mode' systems because they had a 20 bit memory space (It's ok if you don't know what real mode is)</font></span>. The 
+first step of the BIOS is the power-on self test (POST). The job of the 
+POST is to perform a check of the hardware. The second step of the BIOS 
+is local device enumeration and initialization.</p>
+<p>Given the different uses of BIOS functions, the BIOS is made up of 
+two parts: the POST code and runtime services. After the POST is 
+complete, it is flushed from memory, but the BIOS runtime services 
+remain and are available to the target operating system.<br><span style="background-color:yellow;"><font size="4">[These 'runtime services' are functions that can be called via interrupts. In the past, operating systems like MS-DOS relied on these functions to carry out I/O tasks like reading/writing to the disk, using the network and so on. Today operating system don't use these services and use their own drivers instead. actualy, the BIOS interrupts are even disabled on modern operating systems. To quote Linus Torvalds: "just load the OS and get the hell out of there".]<br></font></span></p>
+<p>To boot an operating system, the BIOS runtime searches for devices 
+that are both active and bootable in the order of preference defined by 
+the complementary metal oxide semiconductor (CMOS) settings<span style="background-color:yellow;"><font size="4">[CMOS is simply a chips that stores the settings of the BIOS. If you ever tried to install a linux distribution with a DOK, you know that you can ask BIOS to try to boot from the DOK before it tries to boot from your SSD/HDD. This is exactly what they talk about here. Your preferences will be written to the CMOS and BIOS will try to boot from the DOK first. If it fails, it will try to boot from the next bootable device in the list.]</font></span>. A boot 
+device can be a floppy disk, a CD-ROM, a partition on a hard disk, a 
+device on the network, or even a USB flash memory stick.</p>
+<p>Commonly, Linux is booted from a hard disk, where the Master Boot 
+Record (MBR) contains the primary boot loader. The MBR is a 512-byte 
+sector, located in the first sector on the disk (sector 1 of cylinder 0,
+ head 0<span style="background-color:yellow;"><font size="4">[You can google these things, but it's not important. You just need to know that the disk is divided into sectors. A sector is the smallest block of memory that can be read from the disk and it's 512 bytes in size.]</font></span>). After the MBR is loaded into RAM, the BIOS yields control to 
+it.</p>
+<h2 id="stage-1-boot-loader">Stage 1 boot loader</h2>
+<p>The primary boot loader that resides in the MBR is a 512-byte image 
+containing both program code and a small partition table (see Figure 2).
+ The first 446 bytes are the primary boot loader, which contains both 
+executable code and error message text. The next sixty-four bytes are 
+the partition table, which contains a record for each of four partitions
+ (sixteen bytes each). The MBR ends with two bytes that are defined as 
+the magic number (0xAA55). The magic number serves as a validation check
+ of the MBR.</p>
+<h5 class="ibm-h5" id="fig2">Figure 2. Anatomy of the MBR</h5><img class="" alt="Anatomy of the MBR" data-src="https://developer.ibm.com/developer/articles/l-linuxboot/images/fig2.gif" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/fig2.gif" width="479" height="469">
+<p>The job of the primary boot loader is to find and load the secondary 
+boot loader (stage 2). It does this by looking through the partition 
+table for an active partition. When it finds an active partition, it 
+scans the remaining partitions in the table to ensure that they’re all 
+inactive. When this is verified, the active partition’s boot record is 
+read from the device into RAM and executed.</p>
+<h2 id="stage-2-boot-loader">Stage 2 boot loader</h2>
+<p>The secondary, or second-stage, boot loader could be more aptly 
+called the kernel loader. The task at this stage is to load the Linux 
+kernel and optional initial RAM disk.</p>
+<div class="dw-article-sidebar ibm-background-cool-white-20"> <p> <strong>GRUB stage boot loaders</strong></p> <p>The <code style="font-family:monospace;font-size:1rem">/boot/grub</code> directory contains the <code style="font-family:monospace;font-size:1rem">stage1</code>, <code style="font-family:monospace;font-size:1rem">stage1</code>.5, and <code style="font-family:monospace;font-size:1rem">stage2</code> boot loaders, as well as a number of alternate loaders (for example, CR-ROMs use the <code style="font-family:monospace;font-size:1rem">iso9660_stage_1_5</code>).</p></div>
+<p>The first- and second-stage boot loaders combined are called Linux 
+Loader (LILO) or GRand Unified Bootloader (GRUB) in the x86 PC 
+environment <span style="background-color:yellow;"><font size="4">[There are other bootloaders. But GRUB is the most widely used one]</font></span>. Because LILO has some disadvantages that were corrected in 
+GRUB, let’s look into GRUB. (See many additional resources on GRUB, 
+LILO, and related topics in the <a href="#resources">Resources</a> section later in this article.)</p>
+<p>The great thing about GRUB is that it includes knowledge of Linux 
+file systems. Instead of using raw sectors on the disk, as LILO does, 
+GRUB can load a Linux kernel from an ext2 or ext3 file system. It does 
+this by making the two-stage boot loader into a three-stage boot loader.
+ Stage 1 (MBR) boots a stage 1.5 boot loader that understands the 
+particular file system containing the Linux kernel image. Examples 
+include <code style="font-family:monospace;font-size:1rem">reiserfs_stage1_5</code> (to load from a Reiser journaling file system) or <code style="font-family:monospace;font-size:1rem">e2fs_stage1_5</code>
+ (to load from an ext2 or ext3 file system)<span style="background-color:yellow;"><font size="4">[That's how GRUB Legacy worked. GRUB 2, which is the newer version, works differently. More on that later.]<br></font></span>. When the stage 1.5 boot 
+loader is loaded and running, the stage 2 boot loader can be loaded.</p>
+<p>With stage 2 loaded, GRUB can, upon request, display a list of available kernels (defined in <code style="font-family:monospace;font-size:1rem">/etc/grub.conf</code>, with soft links from <code style="font-family:monospace;font-size:1rem">/etc/grub/menu.lst</code> and <code style="font-family:monospace;font-size:1rem">/etc/grub.conf</code>).
+ You can select a kernel and even amend it with additional kernel 
+parameters. Optionally, you can use a command-line shell for greater 
+manual control over the boot process.</p>
+<p>With the second-stage boot loader in memory, the file system is consulted, and the default kernel image and <code style="font-family:monospace;font-size:1rem">initrd</code> image are loaded into memory. With the images ready, the stage 2 boot loader invokes the kernel image.</p>
+<h2 id="kernel">Kernel</h2>
+<div class="dw-article-sidebar ibm-background-cool-white-20"> <p> <strong>Manual boot in GRUB</strong></p> <p>From the GRUB command-line, you can boot a specific kernel with a named <code style="font-family:monospace;font-size:1rem">initrd</code> image as follows:</p><br> <p> <code style="font-family:monospace;font-size:1rem"> grub&gt; <strong>kernel <br>/bzImage-2.6.14.2</strong> <br> [Linux-bzImage, <br>setup=0x1400, <br>size=0x29672e] <br><br> grub&gt; <strong>initrd <br>/initrd-2.6.14.2.img</strong> <br> <br> <br>[Linux-initrd @ <br>0x5f13000, <br>0xcc199 bytes] <br> <br> grub&gt; <strong>boot</strong> <br> Uncompressing <br>Linux... Ok, <br><strong>boot</strong>ing the kernel. <br> <br></code></p> <p>If
+ you don’t know the name of the kernel to boot, just type a forward 
+slash (/) and press the Tab key. GRUB will display the list of kernels 
+and <code style="font-family:monospace;font-size:1rem">initrd</code> images.</p></div>
+<p>With the kernel image in memory and control given from the stage 2 
+boot loader, the kernel stage begins. The kernel image isn’t so much an 
+executable kernel, but a compressed kernel image. Typically this is a 
+zImage (compressed image, less than 512KB) or a bzImage (big compressed 
+image, greater than 512KB), that has been previously compressed with 
+zlib. At the head of this kernel image is a routine that does some 
+minimal amount of hardware setup and then decompresses the kernel 
+contained within the kernel image and places it into high memory. If an 
+initial RAM disk image is present, this routine moves it into memory and
+ notes it for later use<span style="background-color:yellow;"><font size="4">[The initial RAM disk image (initrd) was already loaded to memory by the bootloader so i'm not sure what they are talking about. Maybe it only moves it in memory.]</font></span>. The routine then calls the kernel and the 
+kernel boot begins.</p>
+<p>When the bzImage (for an i386 image) is invoked, you begin at <code style="font-family:monospace;font-size:1rem">./arch/i386/boot/head.S</code> in the <code style="font-family:monospace;font-size:1rem">start</code> assembly routine (see Figure 3 for the major flow). This routine does some basic hardware setup and invokes the <code style="font-family:monospace;font-size:1rem">startup_32</code> routine in <code style="font-family:monospace;font-size:1rem">./arch/i386/boot/compressed/head.S</code>.
+ This routine sets up a basic environment (stack, etc.) and clears the 
+Block Started by Symbol (BSS). The kernel is then decompressed through a
+ call to a C function called <code style="font-family:monospace;font-size:1rem">decompress_kernel</code> (located in <code style="font-family:monospace;font-size:1rem">./arch/i386/boot/compressed/misc.c</code>). When the kernel is decompressed into memory, it is called. This is yet another <code style="font-family:monospace;font-size:1rem">startup_32</code> function, but this function is in <code style="font-family:monospace;font-size:1rem">./arch/i386/kernel/head.S </code><span style="background-color:yellow;"><font size="4">[These paths are paths inside the code of the linux kernel]</font></span>.</p>
+<p>In the new <code style="font-family:monospace;font-size:1rem">startup_32</code>
+ function (also called the swapper or process 0), the page tables are 
+initialized and memory paging is enabled. The type of CPU is detected 
+along with any optional floating-point unit (FPU) and stored away for 
+later use. The <code style="font-family:monospace;font-size:1rem">start_kernel</code> function is then invoked (<code style="font-family:monospace;font-size:1rem">init/main.c</code>), which takes you to the non-architecture specific Linux kernel. This is, in essence, the <code style="font-family:monospace;font-size:1rem">main</code> function for the Linux kernel.</p>
+<h5 class="ibm-h5" id="fig3">Figure 3. Major functions flow for the Linux kernel i386 boot </h5><img class="" alt="Major Functions in Linux Kernel i386 Boot Process" data-src="https://developer.ibm.com/developer/articles/l-linuxboot/images/fig3.gif" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/fig3.gif" width="443" height="288">
+<p>With the call to <code style="font-family:monospace;font-size:1rem">start_kernel</code>,
+ a long list of initialization functions are called to set up 
+interrupts, perform further memory configuration, and load the initial 
+RAM disk. In the end, a call is made to <code style="font-family:monospace;font-size:1rem">kernel_thread</code> (in <code style="font-family:monospace;font-size:1rem">arch/i386/kernel/process.c</code>) to start the <code style="font-family:monospace;font-size:1rem">init</code>
+ function, which is the first user-space process. Finally, the idle task
+ is started and the scheduler can now take control (after the call to <code style="font-family:monospace;font-size:1rem">cpu_idle</code>). With interrupts enabled, the pre-emptive scheduler periodically takes control to provide multitasking.</p>
+<p>During the boot of the kernel, the initial-RAM disk (<code style="font-family:monospace;font-size:1rem">initrd</code>) that was loaded into memory by the stage 2 boot loader is copied into RAM and mounted. This <code style="font-family:monospace;font-size:1rem">initrd</code>
+ serves as a temporary root file system in RAM and allows the kernel to 
+fully boot without having to mount any physical disks. Since the 
+necessary modules needed to interface with peripherals can be part of 
+the <code style="font-family:monospace;font-size:1rem">initrd</code>, 
+the kernel can be very small, but still support a large number of 
+possible hardware configurations. After the kernel is booted, the root 
+file system is pivoted (via <code style="font-family:monospace;font-size:1rem">pivot_root</code>) where the <code style="font-family:monospace;font-size:1rem">initrd</code> root file system is unmounted and the real root file system is mounted.</p>
+<div class="dw-article-sidebar ibm-background-cool-white-20"> <p> <strong>decompress_kernel output</strong></p> <p>The <code style="font-family:monospace;font-size:1rem">decompress_kernel</code> function is where you see the usual decompression messages emitted to the display: </p>Uncompressing Linux… Ok, booting the kernel.</div>
+<p>The <code style="font-family:monospace;font-size:1rem">initrd</code> 
+function allows you to create a small Linux kernel with drivers compiled
+ as loadable modules. These loadable modules give the kernel the means 
+to access disks and the file systems on those disks, as well as drivers 
+for other hardware assets. Because the root file system is a <em>file system</em> on a disk, the <code style="font-family:monospace;font-size:1rem">initrd</code>
+ function provides a means of bootstrapping to gain access to the disk 
+and mount the real root file system. In an embedded target without a 
+hard disk, the <code style="font-family:monospace;font-size:1rem">initrd</code> can be the final root file system, or the final root file system can be mounted via the Network File System (NFS).</p>
+<h2 id="init">Init</h2>
+<p>After the kernel is booted and initialized, the kernel starts the 
+first user-space application. This is the first program invoked that is 
+compiled with the standard C library. Prior to this point in the 
+process, no standard C applications have been executed.</p>
+<p>In a desktop Linux system, the first application started is commonly <code style="font-family:monospace;font-size:1rem">/sbin/init</code>. But it need not be. Rarely do embedded systems require the extensive initialization provided by <code style="font-family:monospace;font-size:1rem">init</code> (as configured through <code style="font-family:monospace;font-size:1rem">/etc/inittab</code>). In many cases, you can invoke a simple shell script that starts the necessary embedded applications.</p>
+<h2 id="summary">Summary</h2>
+<p>Much like Linux itself, the Linux boot process is highly flexible, 
+supporting a huge number of processors and hardware platforms. In the 
+beginning, the loadlin boot loader provided a simple way to boot Linux 
+without any frills. The LILO boot loader expanded the boot capabilities,
+ but lacked any file system awareness. The latest generation of boot 
+loaders, such as GRUB, permits Linux to boot from a range of file 
+systems (from Minix to Reiser).</p><div style="display: none;">M. Jones</div>
+                        <footer class="code--entry-footer"></footer>          </section>
+        </div>
+        <div class="bx--col-md-4 bx--col-lg-4 bx--offset-lg-1 bx--offset-md-1">
+          <section class="cpt-aside">
+            <nav class="cpt-social" role="navigation" aria-label="Social sharing">
+	            <h5>Share our content</h5>
+	            <ul>
+	              <li>
+									<a title="Share this on Facebook" onclick="return ibmcode.socialpopup(event,this);" target="_blank" class="ibm-facebook-encircled-link" href="http://www.facebook.com/sharer.php?u=https%3A%2F%2Fdeveloper.ibm.com%2Farticles%2Fl-linuxboot%2F&amp;t=Inside+the+Linux+boot+process" data-id="facebook">
+										<i class="ibm-access">Facebook</i>
+										<svg title="Share this on Facebook" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+		                  <title>Share this on Facebook</title>
+		                  <path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"></path>
+		                </svg>
+									</a>
+								</li>
+								<li>
+									<a title="Share this on Twitter" onclick="return ibmcode.socialpopup(event,this);" target="_blank" class="ibm-twitter-encircled-link" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fdeveloper.ibm.com%2Farticles%2Fl-linuxboot%2F&amp;text=Inside+the+Linux+boot+process" data-id="twitter">
+										<i class="ibm-access">Twitter</i>
+										<svg title="Share this on Twitter" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+											<title>Share this on Twitter</title>
+											<path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"></path>
+										</svg>
+									</a>
+								</li>
+								<li>
+									<a title="Share this on LinkedIn" onclick="return ibmcode.socialpopup(event,this);" target="_blank" class="ibm-linkedin-encircled-link" href="http://www.linkedin.com/shareArticle?mini=true&amp;url=https%3A%2F%2Fdeveloper.ibm.com%2Farticles%2Fl-linuxboot%2F&amp;title=Inside+the+Linux+boot+process" data-id="linkedin">
+										<i class="ibm-access">Linked In</i>
+										<svg title="Share this on LinkedIn" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+											<title>Share this on LinkedIn</title>
+											<path d="M4.98 3.5c0 1.381-1.11 2.5-2.48 2.5s-2.48-1.119-2.48-2.5c0-1.38 1.11-2.5 2.48-2.5s2.48 1.12 2.48 2.5zm.02 4.5h-5v16h5v-16zm7.982 0h-4.968v16h4.969v-8.399c0-4.67 6.029-5.052 6.029 0v8.399h4.988v-10.131c0-7.88-8.922-7.593-11.018-3.714v-2.155z"></path>
+										</svg>
+									</a>
+								</li>
+								<li>
+									<a title="Share this on WeChat" onclick="return ibmcode.socialpopup(event,this);" target="_blank" class="ibm-googleplus-encircled-link" href="https://developer.ibm.com/articles/l-linuxboot/" data-id="qrcode">
+									  <i class="ibm-access">WeChat</i>
+										<svg title="Share this on WeChat" width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd">
+											<title>Share this on WeChat</title>
+											<path d="M21.502 19.525c1.524-1.105 2.498-2.738 2.498-4.554 0-3.326-3.237-6.023-7.229-6.023s-7.229 2.697-7.229 6.023c0 3.327 3.237 6.024 7.229 6.024.825 0 1.621-.117 2.36-.33l.212-.032c.139 0 .265.043.384.111l1.583.914.139.045c.133 0 .241-.108.241-.241l-.039-.176-.326-1.215-.025-.154c0-.162.08-.305.202-.392zm-12.827-17.228c-4.791 0-8.675 3.236-8.675 7.229 0 2.178 1.168 4.139 2.997 5.464.147.104.243.276.243.471l-.03.184-.391 1.458-.047.211c0 .16.13.29.289.29l.168-.054 1.899-1.097c.142-.082.293-.133.46-.133l.255.038c.886.255 1.842.397 2.832.397l.476-.012c-.188-.564-.291-1.158-.291-1.771 0-3.641 3.542-6.593 7.911-6.593l.471.012c-.653-3.453-4.24-6.094-8.567-6.094zm5.686 11.711c-.532 0-.963-.432-.963-.964 0-.533.431-.964.963-.964.533 0 .964.431.964.964 0 .532-.431.964-.964.964zm4.82 0c-.533 0-.964-.432-.964-.964 0-.533.431-.964.964-.964.532 0 .963.431.963.964 0 .532-.431.964-.963.964zm-13.398-5.639c-.639 0-1.156-.518-1.156-1.156 0-.639.517-1.157 1.156-1.157.639 0 1.157.518 1.157 1.157 0 .638-.518 1.156-1.157 1.156zm5.783 0c-.639 0-1.156-.518-1.156-1.156 0-.639.517-1.157 1.156-1.157.639 0 1.157.518 1.157 1.157 0 .638-.518 1.156-1.157 1.156z"></path>
+										</svg>
+									</a>
+								</li>
+								<li>
+									<a title="Share this on Weibo" onclick="return ibmcode.socialpopup(event,this);" target="_blank" class="ibm-googleplus-encircled-link" href="http://service.weibo.com/share/share.php?title=Inside+the+Linux+boot+process&amp;url=https%3A%2F%2Fdeveloper.ibm.com%2Farticles%2Fl-linuxboot%2F&amp;pic=" data-id="weibo">
+									  <i class="ibm-access">Weibo</i>
+										<svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+											<path d="M9.03513664,18.4132231 C9.22253207,18.0385675 9.27161182,17.6584022 9.18237591,17.2727273 C9.09313999,16.8870523 8.89235917,16.6115702 8.58003346,16.446281 C8.27663134,16.292011 7.95092025,16.2865014 7.60290017,16.4297521 C7.25488009,16.5730028 6.98717234,16.8264463 6.79977691,17.1900826 C6.60345789,17.5647383 6.54545455,17.9421488 6.62576687,18.322314 C6.7060792,18.7024793 6.89793642,18.9807163 7.20133854,19.1570248 C7.50474066,19.3333333 7.83714445,19.3471074 8.19854992,19.1983471 C8.55995538,19.0495868 8.83881762,18.7878788 9.03513664,18.4132231 Z M10.2933631,16.4132231 C10.3647518,16.2699725 10.3803681,16.1239669 10.3402119,15.9752066 C10.3000558,15.8264463 10.2219743,15.7245179 10.1059677,15.6694215 C9.98103737,15.6143251 9.85387619,15.6170799 9.7244841,15.677686 C9.59509202,15.738292 9.49916341,15.8402204 9.43669827,15.9834711 C9.28499721,16.3250689 9.34300056,16.5730028 9.61070831,16.7272727 C9.73563859,16.7823691 9.86503067,16.7796143 9.99888455,16.7190083 C10.1327384,16.6584022 10.2308979,16.5564738 10.2933631,16.4132231 Z M12.6224205,18.1818182 C12.2208589,19.3057851 11.5158951,20.1322314 10.5075293,20.661157 C9.49916341,21.1900826 8.49972114,21.2561983 7.50920245,20.8595041 C6.55437814,20.4848485 5.89626325,19.7878788 5.53485778,18.768595 C5.17345231,17.7493113 5.20245399,16.7162534 5.6218628,15.6694215 C6.04127161,14.6446281 6.71723369,13.8787879 7.64974902,13.3719008 C8.58226436,12.8650138 9.52147239,12.7603306 10.4673731,13.0578512 C11.4578918,13.3774105 12.1650864,14.0358127 12.5889571,15.0330579 C13.0128277,16.030303 13.0239822,17.0798898 12.6224205,18.1818182 Z M16.7986615,15.5371901 C16.7183491,14.4793388 16.3212493,13.5426997 15.607362,12.7272727 C14.8934746,11.9118457 13.9631902,11.3112948 12.8165086,10.9256198 C11.6698271,10.5399449 10.4450641,10.4242424 9.14221974,10.5785124 C7.15225878,10.8319559 5.50362521,11.6115702 4.19631902,12.9173554 C2.88901283,14.2231405 2.29782487,15.6804408 2.42275516,17.2892562 C2.50306748,18.3471074 2.90016732,19.2837466 3.61405466,20.0991736 C4.327942,20.9146006 5.25822644,21.5151515 6.40490798,21.9008264 C7.55158951,22.2865014 8.77635248,22.4022039 10.0791969,22.2479339 C12.0691578,21.9944904 13.7177914,21.214876 15.0250976,19.9090909 C16.3324038,18.6033058 16.9235917,17.1460055 16.7986615,15.5371901 Z M20.9213608,15.6033058 C20.9213608,16.3526171 20.7562744,17.1212121 20.4261015,17.9090909 C20.0959286,18.6969697 19.6095929,19.4517906 18.9670943,20.1735537 C18.3245956,20.8953168 17.572783,21.5426997 16.7116564,22.1157025 C15.8505298,22.6887052 14.842164,23.1460055 13.6865588,23.4876033 C12.5309537,23.8292011 11.3240379,24 10.0658115,24 C8.80758505,24 7.58059119,23.815427 6.38482989,23.446281 C5.1890686,23.077135 4.11600669,22.5647383 3.16564417,21.9090909 C2.21528165,21.2534435 1.45008366,20.4214876 0.870050195,19.4132231 C0.290016732,18.4049587 0,17.3057851 0,16.1157025 C0,14.8484848 0.310094813,13.4986226 0.930284439,12.0661157 C1.55047407,10.6336088 2.43167875,9.21212121 3.57389849,7.80165289 C5.0819855,5.93939394 6.60568879,4.63911846 8.14500837,3.90082645 C9.68432794,3.16253444 10.7841606,3.20110193 11.4445064,4.01652893 C12.0245399,4.72176309 12.1137758,5.87327824 11.7122142,7.47107438 C11.6765198,7.62534435 11.672058,7.73553719 11.6988288,7.80165289 C11.7255996,7.8677686 11.7702175,7.90633609 11.8326827,7.91735537 C11.8951478,7.92837466 11.9598438,7.92561983 12.0267708,7.90909091 C12.0936977,7.89256198 12.153932,7.87327824 12.2074735,7.85123967 L12.2877858,7.81818182 C13.5281651,7.16804408 14.6257669,6.84297521 15.5805912,6.84297521 C16.5354155,6.84297521 17.2180703,7.17906336 17.6285555,7.85123967 C18.0301171,8.54545455 18.0301171,9.5261708 17.6285555,10.7933884 C17.6107083,10.9366391 17.5906302,11.046832 17.5683212,11.1239669 C17.5460123,11.2011019 17.5660904,11.2699725 17.6285555,11.3305785 C17.6910206,11.3911846 17.7445622,11.4325069 17.7891801,11.4545455 C17.8337981,11.476584 17.9096486,11.5096419 18.0167317,11.553719 C18.5253765,11.7520661 18.9849414,12.0110193 19.3954267,12.3305785 C19.8059119,12.6501377 20.1628555,13.0991736 20.4662577,13.677686 C20.7696598,14.2561983 20.9213608,14.8980716 20.9213608,15.6033058 Z M19.9308422,5.2892562 C20.305633,5.80716253 20.5488009,6.40495868 20.6603458,7.08264463 C20.7718907,7.76033058 20.742889,8.4077135 20.5733408,9.02479339 C20.501952,9.27823691 20.3703291,9.46556474 20.1784718,9.58677686 C19.9866146,9.70798898 19.7880647,9.73002755 19.5828221,9.65289256 C19.3775795,9.56473829 19.2258784,9.40220386 19.1277189,9.16528926 C19.0295594,8.92837466 19.0117122,8.68319559 19.0741774,8.42975207 C19.2526492,7.73553719 19.1455661,7.12396694 18.7529281,6.59504132 C18.36029,6.0661157 17.8828779,5.87327824 17.3206916,6.01652893 C17.1065254,6.07162534 16.9057446,6.02754821 16.7183491,5.88429752 C16.5309537,5.74104683 16.4194088,5.53719008 16.3837144,5.27272727 C16.3390965,5.00826446 16.3747909,4.7630854 16.4907975,4.53719008 C16.6068042,4.31129477 16.7718907,4.1707989 16.9860569,4.11570248 C17.5214724,3.97245179 18.0524261,4.00275482 18.578918,4.20661157 C19.1054099,4.41046832 19.5560513,4.77134986 19.9308422,5.2892562 Z M22.3535973,2.59504132 C23.1299498,3.65289256 23.6319018,4.87878788 23.8594534,6.27272727 C24.087005,7.66666667 24.0267708,8.99724518 23.6787507,10.2644628 C23.5984384,10.5619835 23.4467373,10.7823691 23.2236475,10.9256198 C23.0005577,11.0688705 22.7685443,11.0909091 22.5276074,10.9917355 C22.2866704,10.892562 22.1081985,10.7052342 21.9921919,10.4297521 C21.8761852,10.15427 21.8538762,9.8677686 21.9252649,9.57024793 C22.1751255,8.66666667 22.2197434,7.71900826 22.0591188,6.72727273 C21.8984941,5.73553719 21.5415505,4.86501377 20.9882878,4.11570248 C20.4350251,3.3553719 19.7746793,2.8292011 19.0072504,2.53719008 C18.2398215,2.24517906 17.4679308,2.19834711 16.6915784,2.39669421 C16.4417178,2.46280992 16.2097044,2.41046832 15.9955382,2.23966942 C15.781372,2.06887052 15.6475181,1.8292011 15.5939766,1.52066116 C15.540435,1.21212121 15.5828221,0.928374656 15.7211378,0.669421488 C15.8594534,0.41046832 16.0535416,0.247933884 16.3034021,0.181818182 C17.4010039,-0.104683196 18.4896821,-0.041322314 19.5694367,0.371900826 C20.6491913,0.785123967 21.5772448,1.5261708 22.3535973,2.59504132 Z" id="Shape"></path>
+											</svg>
+									</a>
+								</li>
+							</ul>
+						</nav><nav class="cpt-categoryNav"><ul data-accordion="" class="bx--accordion"><li data-accordion-item="" class="bx--accordion__item bx--accordion__item--active">
+					      <button class="bx--accordion__heading" aria-expanded="true" aria-controls="pane1">
+					        <svg focusable="false" preserveAspectRatio="xMidYMid meet" style="will-change: transform;" xmlns="http://www.w3.org/2000/svg" class="bx--accordion__arrow" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 8l-5 5-.7-.7L9.6 8 5.3 3.7 6 3z"></path></svg>
+					        <div class="bx--accordion__title">Products &amp; Services (1)</div>
+					      </button>
+								<div id="pane1" class="bx--accordion__content"><a href="https://developer.ibm.com/components/ibm-power/" class="bx--tag bx--tag--teal">IBM Power Systems</a></div></li><li data-accordion-item="" class="bx--accordion__item ">
+					      <button class="bx--accordion__heading" aria-expanded="false" aria-controls="pane2">
+					        <svg focusable="false" preserveAspectRatio="xMidYMid meet" style="will-change: transform;" xmlns="http://www.w3.org/2000/svg" class="bx--accordion__arrow" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 8l-5 5-.7-.7L9.6 8 5.3 3.7 6 3z"></path></svg>
+					        <div class="bx--accordion__title">Technologies (2)</div>
+					      </button>
+								<div id="pane1" class="bx--accordion__content"><a href="https://developer.ibm.com/technologies/linux/" class="bx--tag bx--tag--blue">Linux</a><a href="https://developer.ibm.com/technologies/systems/" class="bx--tag bx--tag--blue">Systems</a></div></li></ul></nav><nav class="cpt-categoryNav sb-navigation">
+            <ul data-accordion="" class="bx--accordion">
+              <li data-accordion-item="" class="bx--accordion__item">
+                <button class="bx--accordion__heading" aria-expanded="true" aria-controls="pane1">
+                  <svg focusable="false" preserveAspectRatio="xMidYMid meet" style="will-change: transform;" xmlns="http://www.w3.org/2000/svg" class="bx--accordion__arrow" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 8l-5 5-.7-.7L9.6 8 5.3 3.7 6 3z"></path></svg>
+                    <div class="bx--accordion__title">Table of Contents</div>
+                </button>
+					      <div id="pane1" class="bx--accordion__content">
+                  <ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#system-startup">System startup</a></li>
+<li><a href="#stage-1-boot-loader">Stage 1 boot loader</a></li>
+<li><a href="#stage-2-boot-loader">Stage 2 boot loader</a></li>
+<li><a href="#kernel">Kernel</a></li>
+<li><a href="#init">Init</a></li>
+<li><a href="#summary">Summary</a></li>
+</ul>
+
+                </div>
+              </li>
+            </ul>
+          </nav><nav class="cpt-categoryNav sb-resources">
+            <ul data-accordion="" class="bx--accordion">
+              <li data-accordion-item="" class="bx--accordion__item">
+                <button class="bx--accordion__heading" aria-expanded="false" aria-controls="pane1">
+                  <svg focusable="false" preserveAspectRatio="xMidYMid meet" style="will-change: transform;" xmlns="http://www.w3.org/2000/svg" class="bx--accordion__arrow" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 8l-5 5-.7-.7L9.6 8 5.3 3.7 6 3z"></path></svg>
+                    <div class="bx--accordion__title">Resources</div>
+                </button>
+					      <div id="pane1" class="bx--accordion__content">
+                                  <ul><li><a href="http://www.ibm.com/developerworks/linux/lpi/101.html" target="_blank">Linux Professional Institute (LPI) exam prep</a></li><li><a href="http://www.gnu.org/software/grub/" target="_blank">GNU GRUB</a></li>
+              </ul>
+                </div>
+              </li>
+            </ul>
+          </nav>          </section>
+        </div>
+      </div>
+    </div>
+      </div>
+</div>
+<!-- end new layout -->
+<div class="cpt__related_content">
+         <div class="inner">
+           <!-- -->
+           <div class="bx--grid" style="padding-left: 0;padding-right:0;">
+             <div class="bx--row">
+               <div class="bx--col-md-12 bx--col-lg-12">
+
+                 <div data-tabs="" class="bx--tabs">
+                   <div class="bx--tabs-trigger" tabindex="0">
+                     <a href="javascript:void(0)" class="bx--tabs-trigger-text" tabindex="-1">
+                       Related
+                     </a>
+                     <svg focusable="false" preserveAspectRatio="xMidYMid meet" style="will-change: transform;" xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M5 6L0 1 .7.3 5 4.6 9.3.3l.7.7z"></path></svg>
+                   </div>
+                   <ul class="bx--tabs__nav bx--tabs__nav--hidden" role="tablist">
+                     <li class="bx--tabs__nav-item bx--tabs__nav-item--selected " data-target=".tab-1" role="presentation">
+                       <a tabindex="0" id="tab-link-1" class="bx--tabs__nav-link" href="javascript:void(0)" role="tab" aria-controls="tab-panel-1" aria-selected="true">Related</a>
+                     </li>
+                     <li class="bx--tabs__nav-item " data-target=".tab-2" role="presentation">
+                       <a tabindex="0" id="tab-link-2" class="bx--tabs__nav-link" href="javascript:void(0)" role="tab" aria-controls="tab-panel-2">Recommended</a>
+                     </li>
+                   </ul>
+                 </div>
+                   <div id="tab-panel-1" class="tab-1 bx--tab-content" role="tabpanel" aria-labelledby="tab-link-1" aria-hidden="false">
+                       <div class="bx--row bx--no-gutter--right"><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_events">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/events/southern-california-linux-expo-18x-systems/">
+            
+            <h5 class="developer--card__type">Event | Conference</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Southern California Linux Expo 18x (Systems)</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="ibm--card__date"><svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M26 4.03h-4v-2h-2v2h-8v-2h-2v2H6a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-20a2 2 0 0 0-2-2zm0 22H6v-14h20zm0-16H6v-4h4v2h2v-2h8v2h2v-2h4z"></path></svg> March 5, 2020</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_events">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/events/marist-blockchain-hackathon/">
+            
+            <h5 class="developer--card__type">Event | Hackathon</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Marist Blockchain Hackathon</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="ibm--card__date"><svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M26 4.03h-4v-2h-2v2h-8v-2h-2v2H6a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-20a2 2 0 0 0-2-2zm0 22H6v-14h20zm0-16H6v-4h4v2h2v-2h8v2h2v-2h4z"></path></svg> February 21, 2020</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_events">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/events/code-think-2020/">
+            
+            <h5 class="developer--card__type">Event | Conference</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Code @ Think 2020</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="ibm--card__location"><svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M16 24l-6.09-8.6A8.14 8.14 0 0 1 16 2a8.08 8.08 0 0 1 8 8.13 8.2 8.2 0 0 1-1.8 5.13zm0-20a6.07 6.07 0 0 0-6 6.13 6.19 6.19 0 0 0 1.49 4L16 20.52 20.63 14A6.24 6.24 0 0 0 22 10.13 6.07 6.07 0 0 0 16 4z"></path><circle cx="16" cy="9" r="2"></circle><path d="M28 12h-2v2h2v14H4V14h2v-2H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h24a2 2 0 0 0 2-2V14a2 2 0 0 0-2-2z"></path></svg> San Francisco</span><span class="ibm--card__date"><svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="will-change: transform;"><path d="M26 4.03h-4v-2h-2v2h-8v-2h-2v2H6a2 2 0 0 0-2 2v20a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-20a2 2 0 0 0-2-2zm0 22H6v-14h20zm0-16H6v-4h4v2h2v-2h8v2h2v-2h4z"></path></svg> May 4, 2020</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div></div>
+                   </div>
+                   <div id="tab-panel-2" class="tab-2 bx--tab-content" role="tabpanel" aria-labelledby="tab-link-2" aria-hidden="true" hidden="">
+                       <div class="bx--row bx--no-gutter--right"><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_tutorials">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/tutorials/l-awk2/">
+            
+            <h5 class="developer--card__type">Tutorial</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Records, loops, and arrays</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="developer--card__date">January 1, 2001</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_articles">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/articles/l-u-cyr/">
+            
+            <h5 class="developer--card__type">Article</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Archived | Cyrillic in Unicode</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="developer--card__date">January 1, 2001</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_articles">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/articles/j-leaks/">
+            
+            <h5 class="developer--card__type">Article</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Handling memory leaks in Java programs</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="developer--card__date">February 1, 2001</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_articles">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/articles/l-gdb/">
+            
+            <h5 class="developer--card__type">Article</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Archived | Linux software debugging with GDB</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="developer--card__date">February 1, 2001</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_articles">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/articles/l-lan/">
+            
+            <h5 class="developer--card__type">Article</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Archived | Setting up a Local Area Network</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="developer--card__date">February 1, 2001</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_tutorials">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/tutorials/l-prog2/">
+            
+            <h5 class="developer--card__type">Tutorial</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Functional programming in Python, Part 2</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="developer--card__date">April 1, 2001</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_tutorials">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/tutorials/l-awk3/">
+            
+            <h5 class="developer--card__type">Tutorial</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>String functions and ... checkbooks?</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="developer--card__date">April 1, 2001</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div><div class="bx--col-sm-12 bx--col-md-4 bx--col-lg-4"><div class="developer--card bx--tile ibmcode_tutorials">
+          <a class="developer--card__block_link" href="https://developer.ibm.com/tutorials/j-javalibrary/">
+            
+            <h5 class="developer--card__type">Tutorial</h5>
+            <div class="developer--card__body">
+              <h3 class="developer--card__title"><span>Build your own Java library</span></h3>
+              
+            </div>
+            <div class="developer--card__bottom">
+              <p><span class="developer--card__date">May 29, 2001</span></p>
+              <svg focusable="false" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="will-change: transform;"><path d="M14 4l-1.1 1.1 6 6.1H2v1.6h16.9l-6 6.1L14 20l8-8z"></path></svg>
+            </div>
+          </a>
+        </div></div></div>
+
+                   </div>
+           </div>
+           </div>
+               </div>
+           <!-- -->
+         </div>
+       </div></div>
+</div>
+</div>
+
+<div class="container_footer">
+	<footer role="contentinfo" aria-label="IBM Developer Footer">
+		<!-- developer footer here -->
+		<div id="code-footer" class="code-footer">
+      <div class="ibm-logo">
+        <a href="https://www.ibm.com/">
+          <svg class="Footer-module--logo--3otJM" width="81" height="32" xmlns="http://www.w3.org/2000/svg"><g fill-rule="evenodd"><path d="M0 32h15.689v-2.038H0zM0 27.721h15.689v-2.038H0zM4.483 23.442h6.724v-2.037H4.483zM4.483 19.164h6.724v-2.038H4.483zM4.483 14.885h6.724v-2.037H4.483zM4.482 10.606h6.724V8.568H4.482zM0 6.327h15.689V4.29H0zM0 2.049h15.689V.011H0zM17.93 29.963V32h16.504a8.521 8.521 0 0 0 5.54-2.037H17.93zM17.93 25.683v2.038h23.914a8.535 8.535 0 0 0 .85-2.038H17.93zM22.412 23.442h6.724v-2.037h-6.724zM40.124 17.126H22.412v2.038H41.77a8.62 8.62 0 0 0-1.645-2.038M22.413 12.848v2.036h17.786a8.612 8.612 0 0 0 1.644-2.037h-19.43zM42.693 6.327a8.447 8.447 0 0 0-.85-2.037H17.93v2.037h24.763zM39.974 2.049a8.521 8.521 0 0 0-5.54-2.037H17.93v2.037h22.044zM22.412 10.606h6.724V8.568h-6.724zM35.453 10.606h7.29a8.603 8.603 0 0 0 .248-2.038h-7.538v2.038zM35.453 21.405v2.037h7.538c0-.703-.09-1.384-.248-2.037h-7.29zM57.457 0H44.825v2.038h13.34zM44.826 32h11.21v-2.038h-11.21zM44.826 27.72h11.21v-2.038h-11.21zM49.309 23.439h6.727v-2.038h-6.727zM49.309 19.159h6.727v-2.038h-6.727zM69.488 32h11.21v-2.038h-11.21zM69.488 27.72h11.21v-2.038h-11.21zM69.488 23.439h6.726v-2.038h-6.726zM69.487 19.159h6.726v-2.038h-6.726zM69.488 14.879h6.726V12.84H63.606l-.707 2.038h5.903l.686-1.94zM61.916 12.84H49.31v2.039h6.726v-1.94l.686 1.94h5.903zM76.213 8.56H65.091l-.707 2.038h11.83zM68.06 0l-.706 2.038h13.344V0zM62.757 32l.72-2.038h-1.432zM61.254 27.72h3.015l.72-2.038h-4.455zM59.743 23.44h6.037l.72-2.039h-7.476zM58.232 19.159h9.06l.719-2.038h-10.5zM49.309 10.598h11.83l-.707-2.038H49.309zM65.868 6.318h14.83V4.28H66.576zM58.947 4.28H44.826v2.038h14.828z"></path></g></svg>
+        </a>
+      </div>
+      <div class="footer-links">
+        <div class="bx--grid">
+					<div class="bx--row">
+            <div class="bx--col-sm-2 bx--col-md-3 bx--col-lg-3">
+              <ul>
+                <li class="heading">IBM Developer</li>
+								<li><a href="https://developer.ibm.com/about/?lang=en">About</a></li>
+                      <li><a href="https://developer.ibm.com/feedback/">FAQ</a></li>
+                      <li><a href="https://www.ibm.com/developerworks/secure/report/">Report abuse</a></li>
+                      <li><a href="https://developer.ibm.com/terms/third-party-notice/">Third-party notice</a></li>							</ul>
+						</div>
+            <div class="bx--col-sm-2 bx--col-md-3 bx--col-lg-3">
+							<ul class="tr">
+                <li class="heading">Follow Us</li>
+                <li><a href="https://twitter.com/IBMDeveloper">Twitter</a></li>
+                <li><a href="https://www.linkedin.com/showcase/developerworks/">LinkedIn</a></li>
+                <li><a href="https://www.facebook.com/IBMDeveloper">Facebook</a></li>
+                <li><a href="https://www.youtube.com/channel/UCUm6InQvGI9-6vo1teGWINA">YouTube</a></li>							</ul>
+						</div>
+            <div class="bx--col-sm-2 bx--col-md-3 bx--col-lg-3">
+							<ul>
+								<li class="heading">Explore</li>
+								<li><a href="https://developer.ibm.com/newsletters/">Newsletters</a></li>
+                  <li><a href="https://developer.ibm.com/patterns/">Code patterns</a></li>
+                  <li><a href="https://developer.ibm.com/articles/">Articles</a></li>
+                  <li><a href="https://developer.ibm.com/tutorials/">Tutorials</a></li>
+                  <li><a href="https://developer.ibm.com/open/projects">Open source projects</a></li>
+                  <li><a href="https://developer.ibm.com/videos/">Videos</a></li>
+                  <li><a href="https://developer.ibm.com/events/">Events</a></li>
+                  <li><a href="https://developer.ibm.com/answers/">Answers</a></li>
+                  <li><a href="https://developer.ibm.com/cities/">Cities</a></li>							</ul>
+						</div>
+						<div class="bx--col-sm-2 bx--col-md-3 bx--col-lg-3">
+              <ul class="tr">
+								<li class="heading">Select a language</li>
+								<li><a href="https://developer.ibm.com/">English</a></li>
+                  <li><a href="https://www.ibm.com/developerworks/cn/">中文</a></li>
+                  <li><a href="https://www.ibm.com/developerworks/jp/">日本語</a></li>
+                  <li><a href="https://www.ibm.com/developerworks/ru/">Русский</a></li>
+                  <li><a href="https://www.ibm.com/developerworks/br/">Português</a></li>
+                  <li><a href="https://www.ibm.com/developerworks/ssa/">Español</a></li>
+                  <li><a href="https://developer.ibm.com/kr/">한글</a></li>							</ul>
+						</div>
+					</div>
+				</div>
+      </div>
+    </div>
+
+
+
+			<div class="code_content__wrap">
+
+			</div>
+		</footer></div>
+		<!-- ibm footer here -->
+		<div aria-label="IBM Global Footer" class="dw-footer" id="dw-footer">
+			<div class="code_content__wrap">
+					<div class="dw-footer-corporate-links">
+							<ul>
+									<li><a href="https://developer.ibm.com/community/">Community</a></li>
+                  <li><a href="https://www.ibm.com/privacy/us/en/">Privacy</a></li>
+                  <li><a href="https://developer.ibm.com/terms/ibm-developer-terms-of-use/">Terms of use</a></li>
+                  <li><a href="https://www.ibm.com/accessibility/us/en/">Accessibility</a></li>									<li id="ibm-truste-cp"><a onclick="truste.eu.clickListener();return false;" href="#">Cookie preferences</a></li>
+							</ul>
+					</div>
+					<div id="ibm-footer-locale-selector"></div>
+			</div>
+		</div>
+    <button value="Site feedback" id="Site-feedback-btn-id" onclick="KAMPYLE_ONSITE_SDK.showForm(260)" form="myform" style="position: fixed; cursor: pointer; font-weight: 300; font-size: 16px; line-height: 26px; outline: 0px; text-align: center; height: 32px; padding: 0px 16px; right: 0px; top: 150px; bottom: auto; z-index: 800; transform: rotate(-90deg); transform-origin: 100% 100%; background-color: rgb(255, 255, 255); border: 1px solid rgb(15, 98, 254); color: rgb(15, 98, 254); margin: 0px !important;">
+            Site feedback
+        </button>  
+
+
+<style>
+	#modal-k7naq0vevup .bx--modal-container,
+  #challengeModal  .bx--modal-container{
+		max-width: 980px !important;
+		padding:0 !important;
+		height: 75% !important;
+	}
+  #challengeModal  .bx--modal-container{
+    height: 90% !important;
+    max-height: 90% !important;
+    border-color: #41a8a5;
+  }
+	#modal-k7naq0vevup .bx--modal-content,
+  #challengeModal .bx--modal-content{
+		margin-bottom: 0;
+		height: 100%;
+	}
+	#modal-k7naq0vevup .bx--modal-container iframe,
+  #challengeModal .bx--modal-container iframe{
+		height:100%;
+	}
+</style>
+
+<div id="challengeModal">
+  <div id="challengeIframeWrap">
+    <div class="challenge--modal-header">
+      <button class="challenge--modal-close" type="button" data-modal-close="" aria-label="close modal" data-modal-primary-focus="">
+        <svg class="challenge--modal-close__icon" width="10" height="10" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
+          <title>Close Modal</title>
+          <path d="M6.32 5L10 8.68 8.68 10 5 6.32 1.32 10 0 8.68 3.68 5 0 1.32 1.32 0 5 3.68 8.68 0 10 1.32 6.32 5z" fill-rule="nonzero"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="challenge--modal-content">
+      <iframe id="challengeIframe" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/a.html" scrolling="no" frameborder="0"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- #page -->
+
+<script defer="defer" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/navigation.js"></script>
+<script type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/new-tab.js"></script>
+<script type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/wp-embed.js"></script>
+<script type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/qrcode.js"></script>
+<script>
+	var $searchTrigger = document.getElementById('header-search-module'),
+      $modalInstance = undefined,
+      $developerBurger = document.getElementById('developer-burger'),
+      $codeSideNav = document.getElementById('developerNavTriggersMobile'),
+      $codeSideNavCover = document.getElementById('code--side-nav-cover'),
+      $announcementClose = document.getElementById('announcement_close');
+
+
+  if($announcementClose != null){
+    $announcementClose.addEventListener('click', function(event) {
+      $elm = document.getElementById('code_announcement');
+      $elm.parentNode.removeChild($elm);
+      document.body.classList.remove('no-fixed-menu');
+      ibmcode.setCookie('Code_Annouce_Closed','true',0);
+    });
+  }
+
+	if($searchTrigger != null){ //this can be way more efficient
+		$searchTrigger.addEventListener('click', function(event) {
+      $btn = ibmcode.getClosest(event.target, 'button');
+      if( $btn && $btn.classList.contains('GlobalSearch-module--search-button--search') ){
+        if($searchTrigger.querySelector('input[type="text"]').value.trim() != "" && !($searchTrigger.classList.contains('GlobalSearch-module--hidden')) ){
+          $searchTrigger.querySelector('form').submit();
+        }
+        $searchTrigger.classList.remove('GlobalSearch-module--hidden');
+        $searchTrigger.querySelector('input[type="text"]').focus();
+        $searchTrigger.querySelector('.GlobalSearch-module--search-button--close').classList.remove('GlobalSearch-module--hidden');
+      }else if( $btn && $btn.classList.contains('GlobalSearch-module--search-button--close') ){
+        $searchTrigger.classList.add('GlobalSearch-module--hidden');
+        $searchTrigger.querySelector('input[type="text"]').value= "";
+        $searchTrigger.querySelector('.GlobalSearch-module--search-button--close').classList.add('GlobalSearch-module--hidden');
+      }
+			// window.location.href = 'https://developer.ibm.com?s=';
+		});
+	}
+
+  if($developerBurger != null && $codeSideNavCover != null && $codeSideNav != null){
+		$developerBurger.addEventListener('click', function(event) {
+      //bx--side-nav--expanded
+      if( document.body.classList.contains('bx--side-nav--opened') ){
+        document.body.classList.remove('bx--side-nav--opened');
+      }else{
+        document.body.classList.add('bx--side-nav--opened');
+      }
+		});
+    $codeSideNavCover.addEventListener('click', function(event) {
+      //bx--side-nav--expanded
+      if( document.body.classList.contains('bx--side-nav--opened') ){
+        document.body.classList.remove('bx--side-nav--opened');
+      }else{
+        document.body.classList.add('bx--side-nav--opened');
+      }
+		});
+    $codeSideNav.addEventListener('click', function(event) {
+      //bx--side-nav--expanded
+      $letsFix = event.target.closest('.bx--side-nav__submenu');
+      if($letsFix){
+        if($letsFix.classList.contains('noclick')){
+          return;
+        }
+        if($letsFix.getAttribute("aria-expanded") === 'false'){
+          $letsFix.setAttribute("aria-expanded", "true");
+        }else{
+          $letsFix.setAttribute("aria-expanded", "false");
+        }
+      }
+		});
+	}
+
+
+	$codeLeftNav = document.getElementById('code--side-nav');
+	if($codeLeftNav != null){
+		$codeLeftNav.addEventListener('click', function(event) {
+      event.preventDefault();
+			var menuDropDown = event.target.closest('button.bx--side-nav__submenu');
+      if(menuDropDown){
+        if(menuDropDown.classList.contains('noclick')){
+          return;
+        }
+        if(menuDropDown.getAttribute("aria-expanded") === 'false'){
+          menuDropDown.setAttribute("aria-expanded", "true");
+        }else{
+          menuDropDown.setAttribute("aria-expanded", "false");
+        }
+      }
+		});
+	}
+  var openMenuItem = null;
+  var openSearch = null;
+	document.addEventListener('click', function (event) {
+    // console.info('called');
+    //we need a click event here to close the search if its open and there is a
+    if(openMenuItem != event.target){
+      if(openMenuItem != null){
+        openMenuItem.setAttribute("aria-expanded", "false");
+        openMenuItem = null;
+      }
+    }
+
+    // console.info(event);
+		if ( event.target.classList.contains('bx--snippet__icon') ) {
+			// Get the parent with the `.accordion` class
+			var parentBtn = ibmcode.getClosest(event.target, '.bx--snippet-button');
+			var codeBlock = parentBtn.previousElementSibling.querySelectorAll('code');
+			if(codeBlock[0]){
+				ibmcode.copyText(codeBlock[0]);
+			}
+		}
+    if ( ibmcode.getClosest(event.target, '.bx--header__menu-title') ) {
+      event.preventDefault();
+      var newTarg = ibmcode.getClosest(event.target, '.bx--header__menu-title');
+      if(newTarg === openMenuItem && openMenuItem != null){
+        openMenuItem.setAttribute("aria-expanded", "false");
+        openMenuItem = null;
+        return
+      }
+      openMenuItem = newTarg;
+      openMenuItem.setAttribute("aria-expanded", "true");
+    }
+
+    if ( ibmcode.getClosest(event.target, '.GlobalLogin-module--container') ) {
+      if(event.target.className === 'bx--header__menu-item'){
+        return;
+      }
+      event.preventDefault();
+      var newTarg = ibmcode.getClosest(event.target, '.GlobalLogin-module--container');
+      if(newTarg === openMenuItem && openMenuItem != null){
+        openMenuItem.setAttribute("aria-expanded", "false");
+        openMenuItem = null;
+        return;
+      }
+      openMenuItem = newTarg;
+      openMenuItem.setAttribute("aria-expanded", "true");
+    }
+
+
+
+    if(event.target.id === "challengeModal" || event.target.classList.contains('challenge--modal-close') || event.target.closest('.challenge--modal-close')){
+      toggleChallengeModal('',true);
+      return;
+    }
+    //we clicked on a challenge and we need to trigger the modal for taking it
+    if ( event.target.closest('.developer--card.ibmcode_challenges.loggedin') ) {
+      event.preventDefault();
+      $challengeURL = event.target.closest('.developer--card.ibmcode_challenges.loggedin').querySelector('.developer--card__block_link').href;
+      toggleChallengeModal($challengeURL);
+		}
+	}, false);
+
+
+  function set_size($size){
+    document.querySelector('#challengeIframeWrap .challenge--modal-content').style.height = $size;
+  }
+
+  function toggleChallengeModal($challengeURL,$close,$completedChallenge){
+    if($close === true){
+      document.body.classList.remove("showing-modal");
+      $iFrame = document.getElementById('challengeIframe');
+      $iFrame.src = 'about:blank';
+    }else{
+      $challengeModal = document.getElementById('challengeModal');
+      $iFrame = document.getElementById('challengeIframe');
+      // $iFrameHeight = $iFrame.contentWindow.document.body.offsetHeight;
+      $iFrame.src = $challengeURL;
+      document.body.classList.add("showing-modal");
+    }
+    if(typeof($completedChallenge) === "string"){
+      var completedChallengeCards = document.querySelectorAll('a[href="/challenges/'+$completedChallenge+'/"]');
+      for (var i = 0; i < completedChallengeCards.length; i++) {
+        completedChallengeCards[i].parentNode.classList.add('completed');
+      }
+    }
+  }
+
+
+  var domReadyCallback = function(){
+    // Handler when the DOM is fully loaded
+    //handling the loazy loading of images in the content body and beyond.
+    var lazyloadCardImages,
+        lazyloadContentImages;
+
+    if ("IntersectionObserver" in window) {
+      //this will handle the card background images styled by css
+      lazyloadCardImages = document.querySelectorAll(".lazycards");
+      var imageCardObserver = new IntersectionObserver(function(entries, observer) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            var image = entry.target;
+            image.classList.remove("lazycards");
+            imageCardObserver.unobserve(image);
+          }
+        });
+      });
+      lazyloadCardImages.forEach(function(image) {
+        imageCardObserver.observe(image);
+      });
+      //this will handle the images used in the body of our content types
+      lazyloadContentImages = document.querySelectorAll(".lazycontent");
+      var imageContentObserver = new IntersectionObserver(function(entries, observer) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            var image = entry.target;
+            image.src = image.dataset.src;
+            image.classList.remove("lazycontent");
+            imageContentObserver.unobserve(image);
+          }
+        });
+      });
+
+      lazyloadContentImages.forEach(function(image) {
+        imageContentObserver.observe(image);
+      });
+    }
+
+    //function that runs to set the same height of card elements
+
+    setTimeout(function() {
+      $sameHeightWidgets = document.querySelectorAll('[data-widget="setsameheight"]');
+      ibmcode.widgetSetSameHeight($sameHeightWidgets,true);
+    }, 250);
+    var resizeTimer;
+    ibmcode.addEvent(window,'resize',function(){
+      clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+          ibmcode.widgetSetSameHeight($sameHeightWidgets,true);
+        }, 250);
+    });
+  };
+
+  if ( document.readyState === "complete" || (document.readyState !== "loading" && !document.documentElement.doScroll) ) {
+    domReadyCallback();
+  } else {
+    document.addEventListener("DOMContentLoaded", domReadyCallback);
+  }
+
+</script>
+
+
+<div id="teconsent" class="truste_cookie_prefs" style="position: fixed; display: none; height: 40px; background-color: #ffffff; z-index: 9999999999; bottom: 0; right: 0; margin: 0; padding: 0 16px; line-height: 40px; vertical-align: middle; box-shadow:0 0 10px 3px rgba(0,0,0,.1)" consent="undefined"><script type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/notice" id="truste_0.9551917111647791"></script><script async="async" type="text/javascript" crossorigin="" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/v1.js"></script><a id="icon-id0624436089829536" tabindex="0" role="button" style="cursor: pointer; font-family: ibm-plex-sans; font-size: 12pt; color: #3d3d3d; text-decoration: none" lang="en">Cookie Preferences</a></div><iframe style="display: none;" name="trustarc_notice" id="trustarcNoticeFrame" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/get.html"></iframe><script type="text/javascript" async="" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/generic1584369521817.js" charset="UTF-8"></script><span><div id="KampyleAnimationContainer" style="z-index: 2147483000; border: 0px none; position: fixed; display: block; width: 0px; height: 0px;"></div></span><span id="formLightboxContainer"><div id="kampyleFormContainer" style="top: 0px !important; left: 0px !important; width: 100% !important; height: 100% !important; position: fixed !important; visibility: hidden !important; display: none !important; background-color: rgba(102, 102, 102, 0.4) !important; z-index: 99999999 !important;"> <div id="innerContainer" style="overflow-y: auto; height: 100%;">   <img class="neb-loading-spinner" alt="Loading" style="position: absolute !important; top: 50% !important; left: 50% !important; margin-top: -30px !important; margin-left: -30px !important; max-width: 60px !important; display: none;" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/kloader.gif">   <div id="kampyleFormModal" style="position: fixed !important; height: 100% !important; width: 100% !important;"><iframe id="kampyleForm280" title="Feedback Survey" style="border: 0px none !important; height: 100% !important; max-height: 100% !important; min-height: 100% !important; width: 100% !important; max-width: 100% !important; min-width: 100% !important; display: none !important; position: fixed !important;" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/form1583766648216.html" origin="https://resources.digital-cloud-ibm.medallia.eu"></iframe></div> </div></div></span><script id="kampyleSceenCaptureScript" type="text/javascript" src="Inside%20the%20Linux%20boot%20process%20%E2%80%93%20IBM%20Developer_files/6076e5cb-ce38-4f1b-a8fd-35c0b59384a4.js"></script><iframe style="display: none;"></iframe></body></html>

@@ -16,7 +16,8 @@ Overview
 BIOS and MBR
 #######################################################
 
-* Watch the video "BIOS and UEFI As Fast As Possible.mp4". It can be found in the resources directory.
+* | Watch the video "BIOS and UEFI As Fast As Possible.mp4". It can be found in the resources directory.
+  | This video can be found on youtube at: `<https://www.youtube.com/watch?v=zIYkol851dU>`_
 * | The next document explains in brief about the MBR and the BIOS.
   | Some of the details about the BIOS boot process are not very clear but that's ok, we don't really care about the BIOS.
   | It's just nice to have a general sense of what it does.

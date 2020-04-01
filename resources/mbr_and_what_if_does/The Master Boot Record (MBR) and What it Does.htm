@@ -35,7 +35,9 @@ and<br>
 Why it is Necessary?</b></font></p>
 <center><b><font size="2">If you have arrived here through a search engine, and there's no menu to the left <a href="http://www.dewassoc.com/kbase/index.html" target="_top">click here</a>!</font></b></center>
 <hr width="75%" size="1" color="#000080">
-<p>When you turn on your PC, the processor attempts to begin the process
+<p>
+<span style="background-color:yellow;"><font size="4">[I marked some sections of this document as optional. These sections are unclear and not so important so feel to skip them.]<br></font></span>
+When you turn on your PC, the processor attempts to begin the process
  of processing data. But, since the system memory is empty, the 
 processor doesn't really have anything to execute, or even begin to know
  where to look for it. To
@@ -49,7 +51,7 @@ partitions and what type they are. There also must be someplace where
 the BIOS can load the
 initial boot program that starts the process of loading the operating 
 system. The place where this information is stored is called the <i>master boot record</i> (<i>MBR</i>), also referred to as the <i>master boot sector</i> or even just the
-<i>boot sector</i>. Do not confuse the master boot sector with <a href="javascript:open_window('volume_boot_sectors.htm')"><b>volume boot sectors</b></a>, which are indeed different.<span style="background-color:yellow;"><font size="4">[A volume boot sector is the first sector of a partition, it is referred to as the 'partition's boot record' later in this document.]</font></span></p>
+<i>boot sector</i>. Do not confuse the master boot sector with <a href="javascript:open_window('volume_boot_sectors.htm')"><b>volume boot sectors</b></a>, which are indeed different.<span style="background-color:yellow;"><font size="4">[A volume boot sector/record (VBR) is the first sector of a partition, it is referred to as the 'partition's boot record' later in this document. It is usually operating system specific and its purpose is to load the kernel (After it's loaded and executed by the MBR bootloader, this process is called chain-loading). Windows for example uses the VBR to load its kernel. But in linux, if GRUB is used as a bootloader, the VBR is usually not used at all. More on that later.]</font></span></p>
 <p>The master boot record is always located at cylinder 0, head 0, and 
 sector 1, the first sector on the disk. This is the consistent starting 
 point that the disk will always use. When a computer starts and the BIOS
@@ -105,6 +107,7 @@ they will vary by the manufacturer of your hardware, BIOS, and the
 peripherals you have in the PC. Again, this is a typical sequence of 
 events that occur when you turn on your computers power switch:
 </p><ol>
+<span style="background-color:yellow;"><font size="4">[################### OPTIONAL SECTION ####################]<br></font></span>
   <li>The internal power supply turns on, initializes and then takes a 
 few moments to generate reliable power for the rest of the computer. If 
 the power received by the motherboard's chipset, and subsequently the 
@@ -173,6 +176,7 @@ This is usually related to BIOS setup issues involving processor
 information. Checking this data can be helpful in diagnosing setup 
 problems, although it can be hard to see because sometimes it flashes on
  the screen and then scrolls off the top.<br><br>
+<span style="background-color:yellow;"><font size="4">[################### END OF OPTIONAL SECTION ####################]<br></font></span>
   </li><li>Once the BIOS finishes what it needs to do, it begins 
 searching for a drive to boot an operating system. All BIOS's contain a 
 setting that controls this search sequence for a boot drive. Most are 
@@ -245,9 +249,10 @@ that describes the partition being booted. The boot record program uses
 this data to determine the drive being booted from and the exact 
 location of the partition on the disk. If no active partition table 
 entry can be found, the boot process enters ROM BASIC via INT 18. All 
-other errors will cause the system to hang or stop.<span style="background-color:yellow;"><font size="4">[This summary didn't make any sense to me, But the MBR code below makes everything more clear. Also, notice that this bootloader works different from GRUB. This bootloader loads the partition's boot record (VBR) to the memory and then jumps into it. When GRUB is installed, it's own first stage bootloader is written into the MBR, overwriting the original bootloader. GRUB's first stage bootloader loads a second stage bootloader (called stage 1.5 in GRUB Legacy) which is not located in a VBR, but right after the MBR (We will see it later in the wikipedia page of GRUB). By the way, GRUB's first stage bootloader may be written inside a VBR instead of the MBR. If that's the case, the MBR code may look just like the code below, and GRUB's first stage bootloader will be loaded by it. (Again, it will be explained later).]</font></span></p>
+other errors will cause the system to hang or stop.<span style="background-color:yellow;"><font size="4">[This summary didn't make any sense to me, But the MBR code below makes everything more clear. Also, notice that this bootloader works different from GRUB. This bootloader loads the partition's boot record (VBR) to the memory and then jumps into it. When GRUB is installed, it's own first stage bootloader is written into the MBR, overwriting the original bootloader. GRUB's first stage bootloader loads a second stage bootloader (called stage 1.5 in GRUB Legacy) which is not located in a VBR, but right after the MBR (We will see it later in the wikipedia page of GRUB). By the way, GRUB's first stage bootloader may be written inside a VBR instead of the MBR (Although it's rarely done). If that's the case, the MBR code may look just like the code below, and GRUB's first stage bootloader will be loaded by it. (Again, it will be explained later).]</font></span></p>
 <p><b><font color="#000080">Notes (Extremely Important)</font></b></p>
 <ol>
+<span style="background-color:yellow;"><font size="4">[################### OPTIONAL SECTION ####################]<br></font></span>
   <li>The first byte of an active partition table entry is 80.<br><br>
       This byte is loaded into the DL register before INT 13 is called 
 to read the boot sector. When INT 13 is called, DL is the BIOS device 
@@ -262,7 +267,9 @@ read the boot sector of the active partition. The location of the active
 If the drive is 528MB, this CHS must be a translated CHS. No addresses 
 in LBA form are used (another reason why LBA does not solve the 528MB 
 problem).</li>
+<span style="background-color:yellow;"><font size="4">[################### END OF OPTIONAL SECTION ####################]<br></font></span>
 </ol>
+<span style="background-color:yellow;"><font size="4">[These notes are not very clear either but they really don't seem "Extremely important".]<br></font></span>
 <p><b>Entire MBR record in hex and ASCII</b><font size="2" face="Courier New">
 <br>
 OFFSET 0 1 2 3&nbsp; 4 5 6 7&nbsp; 8 9 A B&nbsp; C D E F&nbsp;
